@@ -12,14 +12,14 @@ CursorsComponent = React.createClass
   cursorBlinkIntervalHandle: null
 
   render: ->
-    {cursorPixelRects, scrollTop, scrollLeft, defaultCharWidth, useHardwareAcceleration} = @props
+    {performedInitialMeasurement, cursorPixelRects, scrollTop, scrollLeft, defaultCharWidth, useHardwareAcceleration} = @props
     {blinkOff} = @state
 
     className = 'cursors'
     className += ' blink-off' if blinkOff
 
     div {className},
-      if @isMounted()
+      if performedInitialMeasurement
         for key, pixelRect of cursorPixelRects
           CursorComponent({key, pixelRect, scrollTop, scrollLeft, defaultCharWidth, useHardwareAcceleration})
 
@@ -44,7 +44,8 @@ CursorsComponent = React.createClass
     @pauseCursorBlinking() if cursorsMoved
 
   startBlinkingCursors: ->
-    @toggleCursorBlinkHandle = setInterval(@toggleCursorBlink, @props.cursorBlinkPeriod / 2) if @isMounted()
+    {performedInitialMeasurement} = @props
+    @toggleCursorBlinkHandle = setInterval(@toggleCursorBlink, @props.cursorBlinkPeriod / 2) if performedInitialMeasurement
 
   startBlinkingCursorsAfterDelay: null # Created lazily
 

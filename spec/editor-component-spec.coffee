@@ -5,7 +5,7 @@ ReactEditorView = require '../src/react-editor-view'
 EditorComponent = require '../src/editor-component'
 nbsp = String.fromCharCode(160)
 
-describe "EditorComponent", ->
+fdescribe "EditorComponent", ->
   [contentNode, editor, wrapperView, wrapperNode, component, componentNode, verticalScrollbarNode, horizontalScrollbarNode] = []
   [lineHeightInPixels, charWidth, delayAnimationFrames, nextAnimationFrame, runSetImmediateCallbacks, lineOverdrawMargin] = []
 
@@ -1858,6 +1858,28 @@ describe "EditorComponent", ->
         expect(event.abortKeyBinding).toHaveBeenCalled()
 
   describe "hiding and showing the editor", ->
+    describe "when the editor is hidden when it is mounted", ->
+      ffit "defers measurement and rendering until the editor becomes visible", ->
+        wrapperView.remove()
+
+        hiddenParent = document.createElement('div')
+        hiddenParent.style.display = 'none'
+        contentNode.appendChild(hiddenParent)
+
+        wrapperView = new ReactEditorView(editor, {lineOverdrawMargin})
+        wrapperNode = wrapperView.element
+        wrapperView.appendTo(hiddenParent)
+
+        {component} = wrapperView
+        componentNode = component.getDOMNode()
+        component.performSyncUpdates = false
+
+        expect(componentNode.querySelectorAll('.line').length).toBe 0
+
+        hiddenParent.style.display = 'block'
+
+        debugger
+
     describe "when the lineHeight changes while the editor is hidden", ->
       it "does not attempt to measure the lineHeightInPixels until the editor becomes visible again", ->
         wrapperView.hide()

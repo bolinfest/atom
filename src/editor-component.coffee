@@ -58,7 +58,7 @@ EditorComponent = React.createClass
     style = {fontSize, fontFamily}
     style.lineHeight = lineHeight unless mini
 
-    if @isMounted()
+    if @performedInitialMeasurement
       renderedRowRange = @getRenderedRowRange()
       [renderedStartRow, renderedEndRow] = renderedRowRange
       cursorPixelRects = @getCursorPixelRects(renderedRowRange)
@@ -109,7 +109,8 @@ EditorComponent = React.createClass
 
         CursorsComponent {
           scrollTop, scrollLeft, cursorPixelRects, cursorBlinkPeriod, cursorBlinkResumeDelay,
-          lineHeightInPixels, defaultCharWidth, @scopedCharacterWidthsChangeCount, @useHardwareAcceleration
+          lineHeightInPixels, defaultCharWidth, @scopedCharacterWidthsChangeCount, @useHardwareAcceleration,
+          @performedInitialMeasurement
         }
         LinesComponent {
           ref: 'lines',
@@ -117,7 +118,7 @@ EditorComponent = React.createClass
           showIndentGuide, renderedRowRange, @pendingChanges, scrollTop, scrollLeft,
           @scrollingVertically, scrollHeight, scrollWidth, mouseWheelScreenRow, invisibles,
           visible, scrollViewHeight, @scopedCharacterWidthsChangeCount, lineWidth, @useHardwareAcceleration,
-          placeholderText
+          placeholderText, @performedInitialMeasurement
         }
 
       ScrollbarComponent
@@ -181,11 +182,9 @@ EditorComponent = React.createClass
     @subscribe atom.themes, 'stylesheet-added stylsheet-removed', @onStylesheetsChanged
     @subscribe scrollbarStyle.changes, @refreshScrollbars
 
-    editor.setVisible(true)
-
-    @measureLineHeightAndDefaultCharWidth()
-    @measureHeightAndWidth()
-    @measureScrollbars()
+    if @visible = @isVisible()
+      console.log "VISIBLE, MEASURING"
+      @performInitialMeasurement()
 
   componentWillUnmount: ->
     @props.parentView.trigger 'editor:will-be-removed', [@props.parentView]
@@ -212,6 +211,16 @@ EditorComponent = React.createClass
     @measureScrollbars() if @measuringScrollbars
     @measureLineHeightAndDefaultCharWidthIfNeeded(prevState)
     @remeasureCharacterWidthsIfNeeded(prevState)
+
+  performInitialMeasurement: ->
+    @updatesPaused = true
+    @measureLineHeightAndDefaultCharWidth()
+    @measureHeightAndWidth()
+    @measureScrollbars()
+    @props.editor.setVisible(true)
+    @updatesPaused = false
+    @performedInitialMeasurement = true
+    @requestUpdate()
 
   requestUpdate: ->
     if @updatesPaused
