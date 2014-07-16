@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+
+  <div id="status"></div>
+
+  <script>
+  function updateStatus(status) {
+    document.getElementById('status').innerHTML = status;
+  }
+  function onAtomLoadError() {
+    updateStatus('Could not load atom.js. Check your console.');
+  }
+  </script>
+  <script src="atom.js" onerror="onAtomLoadError()"></script>
+  <script>
+  if (typeof Editor !== 'undefined') {
+    updateStatus('Success: global Atom Editor available!');
+  } else {
+    updateStatus('atom.js loaded, but Editor failed to load.');
+  }
+  </script>
+
+</body>
+</html>
