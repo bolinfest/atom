@@ -46,8 +46,6 @@ find node_modules/atom -name \*.coffee | xargs -I {} $coffee --compile {}
 ATOM_APP=atom-shell/Atom.app
 ATOM_APP=/Applications/Atom.app
 
-# TODO: Need to copy CSS to web page.
-# TODO: Need to actually use Editor in web page.
 # TODO: Programmatically remove CommandInstaller stuff.
 
 ATOM_NODE_MODULES=node_modules/atom/node_modules
