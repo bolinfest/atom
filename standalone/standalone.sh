@@ -2,7 +2,7 @@
 #
 # Run this script to create a browserfied version of Atom:
 #
-# ./standalone/standalone.sh [--no-build]
+# ./standalone/standalone.sh [--no-npm-install]
 #
 # See https://github.com/substack/node-browserify
 # See https://github.com/atom/atom
@@ -19,15 +19,15 @@ set -e
 cd "$(git rev-parse --show-toplevel)"
 
 # Run the build script to get all of the dependencies and generated files in place.
-if [ "$1" != "--no-build" ]; then
+if [ "$1" != "--no-npm-install" ]; then
   npm install .
   ./script/build
-fi
 
-# Install a specific version of browserify due to
-# https://github.com/substack/node-browserify/issues/796.
-npm install browserify@3.9.1
-npm install envify@1.2.0
+  # Install a specific version of browserify due to
+  # https://github.com/substack/node-browserify/issues/796.
+  npm install browserify@3.9.1
+  npm install envify@1.2.0
+fi
 
 browserify=/Users/mbolin/src/node-browserify/bin/cmd.js
 coffee=node_modules/coffee-script/bin/coffee
@@ -44,8 +44,9 @@ find node_modules/atom -name \*.coffee | xargs -I {} $coffee --compile {}
 ATOM_APP=atom-shell/Atom.app
 ATOM_APP=/Applications/Atom.app
 
-# TODO(mbolin): Need to copy CSS to web page.
-# TODO(mbolin): Need to actually use Editor in web page.
+# TODO: Need to copy CSS to web page.
+# TODO: Need to actually use Editor in web page.
+# TODO: Programmatically remove CommandInstaller stuff.
 
 ATOM_NODE_MODULES=node_modules/atom/node_modules
 
@@ -66,6 +67,37 @@ do
   " > $ATOM_NODE_MODULES/$filename/package.json
 done
 
+# clipboard
+echo '
+function Clipboard() {
+  this.metadata = null;
+  this.signatureForMetadata = null;
+}
+
+Clipboard.prototype = {
+  md5: function(text) {
+    // TODO: Pure JS implementation of md5.
+    return "6d5c9d3b291785b69f79aa5bda210b79cbb8bd94";
+  },
+
+  /** Write the given text to the clipboard. */
+  write: function(text, metadata) {
+    // Do nothing.
+  },
+
+  /** Read the text from the clipboard. */
+  read: function() {
+    return "";
+  },
+
+  readWithMetadata: function() {
+    return {text: ""};
+  },
+};
+
+module.exports = Clipboard;
+' > node_modules/atom/src/clipboard.js
+
 # ipc
 rm -rf $ATOM_NODE_MODULES/ipc
 mkdir -p $ATOM_NODE_MODULES/ipc
@@ -77,6 +109,19 @@ echo '
 }
 ' > $ATOM_NODE_MODULES/ipc/package.json
 
+# module
+rm -rf $ATOM_NODE_MODULES/module
+mkdir -p $ATOM_NODE_MODULES/module
+echo '
+{
+  "name": "module",
+  "main": "./module.js"
+}
+' > $ATOM_NODE_MODULES/module/package.json
+echo '
+exports.globalPaths = [];
+' > $ATOM_NODE_MODULES/module/module.js
+
 # remote
 rm -rf $ATOM_NODE_MODULES/remote
 mkdir -p $ATOM_NODE_MODULES/remote
@@ -87,15 +132,46 @@ echo '
 }
 ' > $ATOM_NODE_MODULES/remote/package.json
 echo '
+var lastWindow;
 exports.getCurrentWindow = function() {
-  // This method appears to be called when Atom is being initialized.
-  var currentWindow = window;
-  if (currentWindow.loadSettings === undefined) {
-    currentWindow.loadSettings = {};
+  if (lastWindow) {
+    return lastWindow;
   }
-  return currentWindow;
+
+  lastWindow = {
+    domWindow: window,
+    loadSettings: {},
+    getPosition: function() {
+      return [window.screenX, window.screenY];
+    },
+    getSize: function() {
+      return [window.innerWidth, window.innerHeight];
+    },
+  }
+
+  return lastWindow;
 };
 ' > $ATOM_NODE_MODULES/remote/remote.js
+
+# screen
+rm -rf $ATOM_NODE_MODULES/screen
+mkdir -p $ATOM_NODE_MODULES/screen
+echo '
+exports.getPrimaryDisplay = function() {
+  return {
+    workAreaSize: {
+      width: 1024,
+      height: 800,
+    },
+  };
+};
+' > $ATOM_NODE_MODULES/screen/screen.js
+echo '
+{
+  "name": "screen",
+  "main": "./screen.js"
+}
+' > $ATOM_NODE_MODULES/screen/package.json
 
 # shell
 rm -rf $ATOM_NODE_MODULES/shell
@@ -121,15 +197,23 @@ sed -i '' -e 's#^{$#{"browser": "./shims/pathwatcher.js",#' node_modules/pathwat
 
 echo "
 window.atom = require('./atom').loadOrCreate('editor');
-window.Editor = require('./editor');
+atom.initialize();
+// atom.startEditorWindow();
 " > node_modules/atom/src/standalone-atom.js
+# Probably want to add --require atom/editor, etc.
+OUTFILE=standalone/atom.js
 $browserify \
    --ignore bindings \
    --ignore oniguruma \
    --ignore onig-reg-exp \
-   --ignore screen \
    --ignore tls \
-   --outfile standalone/atom.js \
+   --ignore scrollbar-style \
+   --ignore git-utils \
+   --outfile $OUTFILE \
    node_modules/atom/src/standalone-atom.js
 
-echo "Load file://$PWD/standalone/atom.html?loadSettings={} in Google Chrome."
+# For some reason, the module shim is not working, so just delete this line.
+sed -i '' -e "/require('module').globalPaths.push(exportsPath);/d" $OUTFILE
+
+echo "Load file://$PWD/standalone/atom.html?loadSettings={\"resourcePath\":\"\"} in Google Chrome."
+echo "Make sure to enable ES6 features via chrome://flags for Set support."
