@@ -21,6 +21,13 @@ File.prototype.getPath = function() {
   return this.path;
 };
 
+File.prototype.on = function(eventType, callback) {
+  // TODO: Create a WebSocket to pump in events for:
+  // - contents-changed
+  // - removed
+  // - moved
+};
+
 exports.File = File;
 
 exports.watch = function(path, callback) {

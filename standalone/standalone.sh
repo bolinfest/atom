@@ -27,10 +27,12 @@ if [ "$1" != "--no-npm-install" ]; then
   # https://github.com/substack/node-browserify/issues/796.
   npm install browserify@3.9.1
   npm install envify@1.2.0
+  npm install less
 fi
 
-browserify=/Users/mbolin/src/node-browserify/bin/cmd.js
+browserify=node_modules/browserify/bin/cmd.js
 coffee=node_modules/coffee-script/bin/coffee
+lessc=node_modules/less/bin/lessc
 
 rm -rf node_modules/atom
 mkdir -p node_modules/atom
@@ -188,6 +190,9 @@ echo '
 }
 ' > $ATOM_NODE_MODULES/shell/package.json
 
+# text-buffer
+cp -R node_modules/text-buffer node_modules/atom/node_modules
+
 # Unfortunately, pathwatcher doesn't have a browserify alternative built-in,
 # so we have to create our own.
 PATHWATCHER_SHIMS=node_modules/pathwatcher/shims
@@ -198,6 +203,13 @@ sed -i '' -e 's#^{$#{"browser": "./shims/pathwatcher.js",#' node_modules/pathwat
 echo "
 window.atom = require('./atom').loadOrCreate('editor');
 atom.initialize();
+
+window.TextBuffer = require('text-buffer');
+window.Editor = require('./editor');
+window.EditorView = require('./editor-view');
+window.DisplayBuffer = require('./display-buffer');
+window.PaneView = require('./pane-view');
+
 // atom.startEditorWindow();
 " > node_modules/atom/src/standalone-atom.js
 # Probably want to add --require atom/editor, etc.
@@ -214,6 +226,41 @@ $browserify \
 
 # For some reason, the module shim is not working, so just delete this line.
 sed -i '' -e "/require('module').globalPaths.push(exportsPath);/d" $OUTFILE
+
+# Workaround for https://github.com/atom/first-mate/commit/cb58560c0d6be658870f65056c802cf4113c8091.
+sed -i '' -e 's#return scanner = new OnigScanner(patterns);#return scanner = {findNextMatch:function(a,b,callback){if (typeof callback === "function") callback(null, null);return null},findNextMatchSync:function(){return null}}#' $OUTFILE
+
+# Generate the CSS for the UI from the LESS source files.
+CSS_OUT=standalone/atom.css
+rm -f $CSS_OUT
+touch $CSS_OUT
+LESS_INCLUDE_PATH=static/variables
+# This list of files came from running the following in Atom's developer console:
+# var styles = document.getElementsByTagName('style'); for (var i = 0; i < styles.length; i++) console.log(style.id)
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bootstrap/less/bootstrap.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/static/atom.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/archive-view/stylesheets/archive-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/background-tips/stylesheets/background-tips.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bookmarks/stylesheets/bookmarks.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bracket-matcher/stylesheets/bracket-matcher.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/deprecation-cop/stylesheets/deprecation-cop.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/feedback/stylesheets/feedback.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/git-diff/stylesheets/git-diff.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/image-view/stylesheets/image-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/keybinding-resolver/stylesheets/keybinding-resolver.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/markdown-preview/stylesheets/markdown-preview.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/release-notes/stylesheets/release-notes.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/settings-view/stylesheets/settings-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/spell-check/stylesheets/spell-check.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/status-bar/stylesheets/status-bar.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/styleguide/stylesheets/styleguide.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/tabs/stylesheets/tabs.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/timecop/stylesheets/timecop.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/tree-view/stylesheets/tree-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/wrap-guide/stylesheets/wrap-guide.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
 
 echo "Load file://$PWD/standalone/atom.html?loadSettings={\"resourcePath\":\"\"} in Google Chrome."
 echo "Make sure to enable ES6 features via chrome://flags for Set support."

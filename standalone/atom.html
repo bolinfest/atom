@@ -1,12 +1,20 @@
 <!doctype html>
 <html>
 <head>
+  <link rel="stylesheet" type="text/css" href="atom.css">
 </head>
 <body>
 
   <div id="status"></div>
 
+  <div id="atom"></div>
+
   <script>
+  // Best approximation of a Node built-in.
+  window.setImmediate = function(callback) {
+    return setTimeout(callback, 0);
+  };
+
   function updateStatus(status) {
     document.getElementById('status').innerHTML = status;
   }
@@ -15,11 +23,36 @@
   }
   </script>
   <script src="atom.js" onerror="onAtomLoadError()"></script>
+
+  <!-- I think this is needed for SpacePen views. -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
   <script>
   if (typeof Editor !== 'undefined') {
     updateStatus('Success: global Atom Editor available!');
+    doStuff();
   } else {
     updateStatus('atom.js loaded, but Editor failed to load.');
+  }
+
+  function doStuff() {
+    var buffer = new TextBuffer({
+      filePath: '/fake/filepath.txt',
+      text: 'The content of my file.',
+    });
+    var editor = new Editor({
+      softTabs: false,
+      initialLine: 1,
+      initialColumn: 1,
+      tabLength: 2,
+      softWrap: false,
+      displayBuffer: null,
+      buffer: buffer,
+      registerEditor: false,
+      suppressCursorCreation: false,
+    });
+    var editorView = new EditorView(editor);
+    $('#atom').append(editorView);
   }
   </script>
 
