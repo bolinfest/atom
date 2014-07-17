@@ -235,30 +235,30 @@ touch $CSS_OUT
 LESS_INCLUDE_PATH=static/variables
 # This list of files came from running the following in Atom's developer console:
 # var styles = document.getElementsByTagName('style'); for (var i = 0; i < styles.length; i++) console.log(style.id)
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bootstrap/less/bootstrap.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/static/atom.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/archive-view/stylesheets/archive-view.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/background-tips/stylesheets/background-tips.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bookmarks/stylesheets/bookmarks.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/bracket-matcher/stylesheets/bracket-matcher.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/deprecation-cop/stylesheets/deprecation-cop.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/feedback/stylesheets/feedback.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/git-diff/stylesheets/git-diff.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/image-view/stylesheets/image-view.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/keybinding-resolver/stylesheets/keybinding-resolver.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/markdown-preview/stylesheets/markdown-preview.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/release-notes/stylesheets/release-notes.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/settings-view/stylesheets/settings-view.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/spell-check/stylesheets/spell-check.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/status-bar/stylesheets/status-bar.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/styleguide/stylesheets/styleguide.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/tabs/stylesheets/tabs.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/timecop/stylesheets/timecop.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/tree-view/stylesheets/tree-view.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/wrap-guide/stylesheets/wrap-guide.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH /Applications/Atom.app/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/bootstrap/less/bootstrap.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/static/atom.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/archive-view/stylesheets/archive-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/background-tips/stylesheets/background-tips.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/bookmarks/stylesheets/bookmarks.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/bracket-matcher/stylesheets/bracket-matcher.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/deprecation-cop/stylesheets/deprecation-cop.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/feedback/stylesheets/feedback.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/git-diff/stylesheets/git-diff.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/image-view/stylesheets/image-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/keybinding-resolver/stylesheets/keybinding-resolver.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/markdown-preview/stylesheets/markdown-preview.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/release-notes/stylesheets/release-notes.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/settings-view/stylesheets/settings-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/spell-check/stylesheets/spell-check.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/status-bar/stylesheets/status-bar.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/styleguide/stylesheets/styleguide.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/tabs/stylesheets/tabs.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/timecop/stylesheets/timecop.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/tree-view/stylesheets/tree-view.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/wrap-guide/stylesheets/wrap-guide.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
 
 echo "Load file://$PWD/standalone/atom.html?loadSettings={\"resourcePath\":\"\"} in Google Chrome."
 echo "Make sure to enable ES6 features via chrome://flags for Set support."
