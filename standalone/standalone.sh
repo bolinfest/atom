@@ -44,9 +44,10 @@ find node_modules/atom -name \*.coffee | xargs -I {} $coffee --compile {}
 ATOM_APP=atom-shell/Atom.app
 ATOM_APP=/Applications/Atom.app
 
-# TODO(mbolin): Should be copying to node_modules/atom/node_modules/XXX.
 # TODO(mbolin): Need to copy CSS to web page.
 # TODO(mbolin): Need to actually use Editor in web page.
+
+ATOM_NODE_MODULES=node_modules/atom/node_modules
 
 # common
 common_libs=$ATOM_APP/Contents/Resources/atom/common/api/lib/*.js
@@ -54,37 +55,37 @@ for fullfile in $common_libs
 do
   filename=$(basename "$fullfile")
   filename="${filename%.*}"
-  rm -rf node_modules/$filename
-  mkdir -p node_modules/$filename
-  cp $fullfile node_modules/$filename
+  rm -rf $ATOM_NODE_MODULES/$filename
+  mkdir -p $ATOM_NODE_MODULES/$filename
+  cp $fullfile $ATOM_NODE_MODULES/$filename
   echo "
   {
     \"name\": \"$filename\",
     \"main\": \"./$filename.js\"
   }
-  " > node_modules/$filename/package.json
+  " > $ATOM_NODE_MODULES/$filename/package.json
 done
 
 # ipc
-rm -rf node_modules/ipc
-mkdir -p node_modules/ipc
-cp $ATOM_APP/Contents/Resources/atom/browser/api/lib/ipc.js node_modules/ipc
+rm -rf $ATOM_NODE_MODULES/ipc
+mkdir -p $ATOM_NODE_MODULES/ipc
+cp $ATOM_APP/Contents/Resources/atom/browser/api/lib/ipc.js $ATOM_NODE_MODULES/ipc
 echo '
 {
   "name": "ipc",
   "main": "./ipc.js"
 }
-' > node_modules/ipc/package.json
+' > $ATOM_NODE_MODULES/ipc/package.json
 
 # remote
-rm -rf node_modules/remote
-mkdir -p node_modules/remote
+rm -rf $ATOM_NODE_MODULES/remote
+mkdir -p $ATOM_NODE_MODULES/remote
 echo '
 {
   "name": "remote",
   "main": "./remote.js"
 }
-' > node_modules/remote/package.json
+' > $ATOM_NODE_MODULES/remote/package.json
 echo '
 exports.getCurrentWindow = function() {
   // This method appears to be called when Atom is being initialized.
@@ -94,22 +95,22 @@ exports.getCurrentWindow = function() {
   }
   return currentWindow;
 };
-' > node_modules/remote/remote.js
+' > $ATOM_NODE_MODULES/remote/remote.js
 
 # shell
-rm -rf node_modules/shell
-mkdir -p node_modules/shell
+rm -rf $ATOM_NODE_MODULES/shell
+mkdir -p $ATOM_NODE_MODULES/shell
 echo '
 exports.beep = function() {
   // TODO: beep().
 };
-' > node_modules/shell/shell.js
+' > $ATOM_NODE_MODULES/shell/shell.js
 echo '
 {
   "name": "shell",
   "main": "./shell.js"
 }
-' > node_modules/shell/package.json
+' > $ATOM_NODE_MODULES/shell/package.json
 
 # Unfortunately, pathwatcher doesn't have a browserify alternative built-in,
 # so we have to create our own.
