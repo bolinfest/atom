@@ -266,6 +266,7 @@ $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_m
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
+cp static/octicons.woff standalone
 
 echo 'GLOBAL_KEYMAP_BASE = ' > standalone/keymap_base.js
 $cson keymaps/base.cson >> standalone/keymap_base.js

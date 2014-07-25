@@ -65,6 +65,10 @@
     editorView.appendTo(jQueryElement);
     editorView.requestDisplayUpdate();
 
+    // This sets the default configuration, which has the side-effect of
+    // enabling line numbers.
+    atom.config.setDefaults('editor', EditorView.configDefaults);
+
     atom.keymaps.add('base', GLOBAL_KEYMAP_BASE);
     atom.keymaps.add('darwin', GLOBAL_KEYMAP_DARWIN);
   }
