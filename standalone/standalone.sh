@@ -26,6 +26,11 @@ if [ "$1" != "--no-npm-install" ]; then
   # Install a specific version of browserify due to
   # https://github.com/substack/node-browserify/issues/796.
   npm install browserify@3.9.1
+  cd node_modules/browserify
+  # Replace url0.7.9 with url@0.10.1 because this ridiculous bug screws up a
+  # ton of stuff: https://github.com/webpack/node-libs-browser/issues/9.
+  cd -
+
   npm install cson
   npm install envify@1.2.0
   npm install less
