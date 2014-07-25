@@ -26,12 +26,14 @@ if [ "$1" != "--no-npm-install" ]; then
   # Install a specific version of browserify due to
   # https://github.com/substack/node-browserify/issues/796.
   npm install browserify@3.9.1
+  npm install cson
   npm install envify@1.2.0
   npm install less
 fi
 
 browserify=node_modules/browserify/bin/cmd.js
 coffee=node_modules/coffee-script/bin/coffee
+cson=node_modules/cson/bin/cson2json
 lessc=node_modules/less/bin/lessc
 
 rm -rf node_modules/atom
@@ -208,7 +210,12 @@ window.EditorView = require('./editor-view');
 window.DisplayBuffer = require('./display-buffer');
 window.PaneView = require('./pane-view');
 
-// atom.startEditorWindow();
+// Ideally, we would call:
+//
+//   atom.startEditorWindow();
+//
+// But startEditorWindow() assumes the entire workspace is present,
+// so we call individual pieces of it in atom.html as a workaround.
 " > node_modules/atom/src/standalone-atom.js
 # Probably want to add --require atom/editor, etc.
 OUTFILE=standalone/atom.js
@@ -259,6 +266,12 @@ $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_m
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
+
+echo 'GLOBAL_KEYMAP_BASE = ' > standalone/keymap_base.js
+$cson keymaps/base.cson >> standalone/keymap_base.js
+
+echo 'GLOBAL_KEYMAP_DARWIN = ' > standalone/keymap_darwin.js
+$cson keymaps/darwin.cson >> standalone/keymap_darwin.js
 
 echo "Load file://$PWD/standalone/atom.html?loadSettings={\"resourcePath\":\"\"} in Google Chrome."
 echo "Make sure to enable ES6 features via chrome://flags for Set support."

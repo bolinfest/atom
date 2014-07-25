@@ -22,10 +22,12 @@
     updateStatus('Could not load atom.js. Check your console.');
   }
   </script>
+  <script src="keymap_base.js"></script>
+  <script src="keymap_darwin.js"></script>
   <script src="atom.js" onerror="onAtomLoadError()"></script>
 
   <!-- I think this is needed for SpacePen views. -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.js"></script>
 
   <script>
   if (typeof Editor !== 'undefined') {
@@ -51,8 +53,20 @@
       registerEditor: false,
       suppressCursorCreation: false,
     });
+
+    // Look at EditorView.initialize() for an explanation of mini vs. non-mini.
     var editorView = new EditorView(editor);
-    $('#atom').append(editorView);
+    // var editorView = new EditorView({mini: true});
+    editorView.setHeightInLines(4);
+
+    var jQueryElement = $('#atom');
+    // Invoking appendTo() has the side-effect of running EditorView's
+    // afterAttach hook.
+    editorView.appendTo(jQueryElement);
+    editorView.requestDisplayUpdate();
+
+    atom.keymaps.add('base', GLOBAL_KEYMAP_BASE);
+    atom.keymaps.add('darwin', GLOBAL_KEYMAP_DARWIN);
   }
   </script>
 
