@@ -269,8 +269,13 @@ $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_m
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/tree-view/stylesheets/tree-view.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/wrap-guide/stylesheets/wrap-guide.less >> $CSS_OUT
 $lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/find-and-replace/stylesheets/find-and-replace.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-syntax/index.less >> $CSS_OUT
-$lessc --include-path=$LESS_INCLUDE_PATH $ATOM_APP/Contents/Resources/app/node_modules/atom-dark-ui/index.less >> $CSS_OUT
+
+# When inspecting the <head> tag of Atom itself, the <style> elements for
+# atom-dark-syntax and atom-dark-ui are annotated with class="theme" instead
+# of class="bundled", so presumably they are treated slightly differently
+# (or can be swapped out with stylesheets from a different theme).
+$lessc --include-path=node_modules/atom-dark-syntax/stylesheets node_modules/atom-dark-syntax/index.less >> $CSS_OUT
+$lessc --include-path=$LESS_INCLUDE_PATH node_modules/atom-dark-ui/index.less >> $CSS_OUT
 cp static/octicons.woff standalone
 
 echo 'GLOBAL_KEYMAP_BASE = ' > standalone/keymap_base.js
