@@ -89,6 +89,29 @@ module.exports = (grunt) ->
     metadata._atomKeymaps = getKeymaps(appDir)
     metadata._deprecatedPackages = require('../deprecated-packages')
 
+    # Move Nuclide packages from "dependencies" to "packageDependencies".
+    nuclide_packages = [
+      "hyperclick",
+      "nuclide-arcanist",
+      "nuclide-code-format",
+      "nuclide-diagnostics-store",
+      "nuclide-diagnostics-ui",
+      "nuclide-diff-view",
+      "nuclide-file-tree",
+      "nuclide-file-watcher",
+      "nuclide-find-references",
+      "nuclide-flow",
+      "nuclide-hack",
+      "nuclide-hg-repository",
+      "nuclide-language-hack",
+      "nuclide-ocaml",
+      "nuclide-quick-open",
+      "nuclide-remote-projects",
+      "nuclide-type-hint",
+    ]
+    for nuclide_package in nuclide_packages:
+      delete metadata.dependencies[nuclide_package]
+
     for name, {version} of metadata._deprecatedPackages
       if version and not semver.validRange(version)
         invalidPackages = true

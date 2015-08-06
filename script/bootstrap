@@ -37,6 +37,7 @@ function bootstrap() {
   var initialNpmCommand = fs.existsSync(npmPath) ? npmPath : 'npm';
   var npmFlags = ' --userconfig=' + path.resolve(__dirname, '..', 'build', '.npmrc') + ' ';
 
+  // TODO(bolinfest): Consider adding nuclide packages here.
   var packagesToDedupe = [
     'abbrev',
     'amdefine',

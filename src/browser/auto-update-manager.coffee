@@ -37,7 +37,8 @@ class AutoUpdateManager
       @setState(ErrorState)
       console.error "Error Downloading Update: #{message}"
 
-    autoUpdater.setFeedUrl @feedUrl
+    # Disabled for Nuclide.
+    # autoUpdater.setFeedUrl @feedUrl
 
     autoUpdater.on 'checking-for-update', =>
       @setState(CheckingState)
