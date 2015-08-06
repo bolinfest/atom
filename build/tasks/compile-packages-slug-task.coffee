@@ -109,8 +109,9 @@ module.exports = (grunt) ->
       "nuclide-remote-projects",
       "nuclide-type-hint",
     ]
-    for nuclide_package in nuclide_packages:
+    for nuclide_package in nuclide_packages
       delete metadata.dependencies[nuclide_package]
+      metadata.packageDependencies[nuclide_package] = '0.0.28'
 
     for name, {version} of metadata._deprecatedPackages
       if version and not semver.validRange(version)
