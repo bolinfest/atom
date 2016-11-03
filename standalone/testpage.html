@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+  <div id="status" style="display: none; color: #A00; margin: 5px;"></div>
+
+  <script>
+  function updateStatus(message) {
+    var status = document.getElementById('status');
+    status.innerHTML = message;
+    status.style.display = 'block';
+  }
+
+  function onAtomLoadError() {
+    updateStatus('Could not load atom.js. Check your console.');
+  }
+  </script>
+  <script src="out/atom.js" onerror="onAtomLoadError()"></script>
+</body>
+</html>

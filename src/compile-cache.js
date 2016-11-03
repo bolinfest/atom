@@ -15,6 +15,8 @@ var COMPILERS = {
   '.coffee': require('./coffee-script')
 }
 
+exports.COMPILERS = COMPILERS
+
 var cacheStats = {}
 var cacheDirectory = null
 
@@ -23,12 +25,13 @@ exports.setAtomHomeDirectory = function (atomHome) {
   if (process.env.USER === 'root' && process.env.SUDO_USER && process.env.SUDO_USER !== process.env.USER) {
     cacheDir = path.join(cacheDir, 'root')
   }
-  this.setCacheDirectory(cacheDir)
+  setCacheDirectory(cacheDir)
 }
 
-exports.setCacheDirectory = function (directory) {
+function setCacheDirectory (directory) {
   cacheDirectory = directory
 }
+exports.setCacheDirectory = setCacheDirectory
 
 exports.getCacheDirectory = function () {
   return cacheDirectory
@@ -81,6 +84,7 @@ function compileFileAtPath (compiler, filePath, extension) {
   }
   return sourceCode
 }
+exports.compileFileAtPath = compileFileAtPath
 
 function readCachedJavascript (relativeCachePath) {
   var cachePath = path.join(cacheDirectory, relativeCachePath)
