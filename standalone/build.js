@@ -44,6 +44,7 @@ function build() {
     standaloneDir + '/shims/clipboard.js',
     nodeModules + '/atom/src/clipboard.js');
   [
+    'electron',
     'module',
     'remote',
     'screen',
@@ -53,34 +54,35 @@ function build() {
   // Call browserify on node_modules/atom/src/standalone-atom.js.
   const browserifyInputFile = nodeModules + '/atom/src/standalone-atom.js';
   fs.copyFileSync(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
-  const modulesToIgnore = new Set([
+  const modulesToFilter = new Set([
     // Modules with native dependencies.
-    'electron',
-    'git-utils',
-    // 'marker-index', We reimplement this rather than ignore it.
-    'oniguruma',
     'onig-reg-exp',
-    'scrollbar-style',
     'tls',
 
     '../src/main-process/win-shell', // From exports/atom.js
   ]);
+
+  const fullShims = new Set([
+    'git-utils',
+    'oniguruma',
+    'pathwatcher',
+    'marker-index',
+    'scrollbar-style',
+  ])
+
   const browserifyJob = browserify(
     [browserifyInputFile],
     {
+      // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
       filter(id) {
-        return !modulesToIgnore.has(id);
+        return !modulesToFilter.has(id);
       },
 
       packageFilter(pkg, dir) {
         const {name} = pkg;
-        if (name === 'pathwatcher') {
+        if (fullShims.has(name)) {
           const clone = Object.assign({}, pkg);
-          clone.browser = standaloneDir + '/shims/pathwatcher.js';
-          return clone;
-        } else if (name == 'marker-index') {
-          const clone = Object.assign({}, pkg);
-          clone.browser = standaloneDir + '/shims/marker-index/marker-index.js';
+          clone.browser = standaloneDir + `/shims/${name}/index.js`;
           return clone;
         } else {
           return pkg;
@@ -88,6 +90,9 @@ function build() {
       },
     }
   );
+
+  browserifyJob.ignore('oniguruma');
+
   browserifyJob.on('error', exitOnError);
   const bundle = browserifyJob.bundle();
   bundle.on('error', exitOnError);
