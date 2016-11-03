@@ -57,7 +57,7 @@ function build() {
     // Modules with native dependencies.
     'electron',
     'git-utils',
-    'marker-index',
+    // 'marker-index', We reimplement this rather than ignore it.
     'oniguruma',
     'onig-reg-exp',
     'scrollbar-style',
@@ -73,9 +73,14 @@ function build() {
       },
 
       packageFilter(pkg, dir) {
-        if (pkg.name === 'pathwatcher') {
+        const {name} = pkg;
+        if (name === 'pathwatcher') {
           const clone = Object.assign({}, pkg);
           clone.browser = standaloneDir + '/shims/pathwatcher.js';
+          return clone;
+        } else if (name == 'marker-index') {
+          const clone = Object.assign({}, pkg);
+          clone.browser = standaloneDir + '/shims/marker-index/marker-index.js';
           return clone;
         } else {
           return pkg;
