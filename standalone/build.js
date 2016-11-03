@@ -63,9 +63,6 @@ function build() {
     'scrollbar-style',
     'tls',
 
-    // GitHub is in the process of publishing this?
-    'buffer-offset-index',
-
     '../src/main-process/win-shell', // From exports/atom.js
   ]);
   const browserifyJob = browserify(
