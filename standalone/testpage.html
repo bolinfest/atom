@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <script>
+  function updateStatus(message) {
+    console.error(message);
+    var status = document.createElement('div');
+    status.style.color = '#A00';
+    status.style.backgroundColor = 'white';
+    status.innerHTML = message;
+    document.body.appendChild(status);
+  }
+
+  function onAtomLoadError() {
+    updateStatus('Could not load atom.js. Check your console.');
+  }
+  </script>
+  <script src="out/atom.js" onerror="onAtomLoadError()"></script>
+  <script>
+  // var buffer = new TextBuffer({
+  //   filePath: '/fake/filepath.txt',
+  //   text: 'Type in here to try things out!\n\nThe content type of this buffer is \'plain\', so there is no syntax highlighting.',
+  // });
+  </script>
+</body>
+</html>
