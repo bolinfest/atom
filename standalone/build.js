@@ -106,7 +106,17 @@ function build() {
 
   const browserifyOutputFile = standaloneDir + '/out/atom.js';
   fs.makeTreeSync(path.dirname(browserifyOutputFile));
-  bundle.pipe(fs.createWriteStream(browserifyOutputFile));
+  const stream = bundle.pipe(fs.createWriteStream(browserifyOutputFile));
+
+  stream.on('finish', () => {
+    // TODO(mbolin): Find a cleaner workaround for this:
+    const toReplace = "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));";
+    // const css = fs.readFileSync(standaloneDir + '/styles.css', 'utf8').replace('"', "'");
+    const result = spawnSync('sed', ['-i', '', '-e', `s?${toReplace}?ShadowStyleSheet.textContent = "";?`, browserifyOutputFile]);
+    if (result.error) {
+      throw result.error;
+    }
+  });
 }
 
 function transpileFile(absolutePath) {
@@ -121,10 +131,6 @@ function transpileFile(absolutePath) {
   // Replace the original file extension with .js.
   const outputFile = absolutePath.substring(0, absolutePath.length - ext.length) + '.js';
   fs.writeFileSync(outputFile, transpiledSource);
-
-  // TODO(mbolin): Find a cleaner workaround for this:
-  const toReplace = "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));";
-  spawnSync('sed', ['-i', '', '-e', `s#${toReplace}#ShadowStyleSheet.textContent = "";#`, outputFile]);
 }
 
 function createShimWithPaths(moduleName, standaloneDir, nodeModules) {
