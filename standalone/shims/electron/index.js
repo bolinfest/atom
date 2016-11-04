@@ -67,7 +67,6 @@ registerMethod('show-window');
 registerMethod('focus-window');
 
 function dispatch(action, ...args) {
-  console.info('dispatch', action, ...args, listeners[action]);
   (listeners[action] || []).forEach(function(listener) {
     listener(action, ...args);
   })
@@ -103,7 +102,6 @@ module.exports = {
         listeners[action] = [];
       }
       listeners[action].push(cb);
-      console.info('Register IPC listener', action);
       if (action === 'ipc-helpers-get-temporary-window-state-response') {
         dispatch('ipc-helpers-get-temporary-window-state-response', temporaryWindowState);
       }
@@ -115,12 +113,10 @@ module.exports = {
         console.warn('Ignored IPC call', action, ...args);
         return;
       }
-      console.log('Received IPC call', action, ...args);
       handler(...args)
     },
 
     removeAllListeners(action) {
-      console.log('Unregister IPC', action);
       delete listeners[action];
     },
   },
