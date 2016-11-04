@@ -105,14 +105,18 @@ function build() {
   bundle.on('error', exitOnError);
 
   const browserifyOutputFile = standaloneDir + '/out/atom.js';
-  fs.makeTreeSync(path.dirname(browserifyOutputFile));
-  const stream = bundle.pipe(fs.createWriteStream(browserifyOutputFile));
+  const css = fs.readFileSync(standaloneDir + '/styles.css', 'utf8').replace(/"/g, "'").replace(/\n/g, ' ');
 
-  stream.on('finish', () => {
+  fs.makeTreeSync(path.dirname(browserifyOutputFile));
+  const writeStream = fs.createWriteStream(browserifyOutputFile);
+  writeStream.write('const A_LOT_OF_CSS = "');
+  writeStream.write(css);
+  writeStream.write('";\n\n');
+
+  bundle.pipe(writeStream).on('finish', () => {
     // TODO(mbolin): Find a cleaner workaround for this:
     const toReplace = "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));";
-    // const css = fs.readFileSync(standaloneDir + '/styles.css', 'utf8').replace('"', "'");
-    const result = spawnSync('sed', ['-i', '', '-e', `s?${toReplace}?ShadowStyleSheet.textContent = "";?`, browserifyOutputFile]);
+    const result = spawnSync('sed', ['-i', '', '-e', `s?${toReplace}?ShadowStyleSheet.textContent = A_LOT_OF_CSS;?`, browserifyOutputFile]);
     if (result.error) {
       throw result.error;
     }
