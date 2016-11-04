@@ -20,4 +20,4 @@ let addSet = (set, valuesToAdd) => valuesToAdd.forEach(value => set.add(value));
 
 let intersectSet = (set, other) => set.forEach(function(value) { if (!other.has(value)) { return set.delete(value); } });
 
-module.export = { setEqual, subtractSet, addSet, intersectSet };
+module.exports = { setEqual, subtractSet, addSet, intersectSet };
