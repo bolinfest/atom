@@ -7,6 +7,7 @@ const {COMPILERS, compileFileAtPath, setAtomHomeDirectory} = require('../src/com
 const browserify = require('browserify');
 const fs = require('fs-plus');
 const path = require('path');
+const {spawnSync} = require('child_process');
 
 function build() {
   // This is necessary to set the compile-cache.
@@ -122,6 +123,10 @@ function transpileFile(absolutePath) {
   // Replace the original file extension with .js.
   const outputFile = absolutePath.substring(0, absolutePath.length - ext.length) + '.js';
   fs.writeFileSync(outputFile, transpiledSource);
+
+  // TODO(mbolin): Find a cleaner workaround for this:
+  const toReplace = "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));";
+  spawnSync('sed', ['-i', '', '-e', `s#${toReplace}#ShadowStyleSheet.textContent = "";#`, outputFile]);
 }
 
 function createShimWithPaths(moduleName, standaloneDir, nodeModules) {

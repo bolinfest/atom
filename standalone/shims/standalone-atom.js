@@ -125,6 +125,5 @@ require('module').globalPaths = [];
 
 const initializeApplicationWindow = require('../src/initialize-application-window');
 initializeApplicationWindow({blobStore: null}).then(() => {
-  console.log('created?');
+  require('electron').ipcRenderer.send('window-command', 'window:loaded');
 });
-console.log('initializeApplicationWindow called, but what about Promise resolution?');
