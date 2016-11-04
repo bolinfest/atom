@@ -477,7 +477,7 @@ class MarkerIndex {
     }
     this.condenseIfNeeded();
 
-    console.warn('Mocked marker.splice to not crash');
+    // vjeux: changed
     return { touch: [] };
   }
 
