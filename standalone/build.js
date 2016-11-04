@@ -8,6 +8,7 @@ const browserify = require('browserify');
 const fs = require('fs-plus');
 const path = require('path');
 const {spawnSync} = require('child_process');
+const CSON = require('season');
 const watchify = require('watchify');
 const chokidar = require('chokidar');
 
@@ -53,6 +54,9 @@ function build() {
   );
   copyFileSyncWatch(gitRoot + '/static/octicons.woff', standaloneDir + '/out/octicons.woff');
 
+  // TODO: We need a build process for styles.css.
+  copyFileSyncWatch(standaloneDir + '/styles.css', standaloneDir + '/out/styles.css');
+
   // Insert some shims.
   copyFileSyncWatch(
     standaloneDir + '/shims/clipboard.js',
@@ -68,8 +72,6 @@ function build() {
   // Call browserify on node_modules/atom/src/standalone-atom.js.
   const browserifyInputFile = nodeModules + '/atom/src/standalone-atom.js';
   copyFileSyncWatch(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
-
-  const cssFile = standaloneDir + '/styles.css';
 
   const modulesToFilter = new Set([
     // Modules with native dependencies that we do not expect to exercise at runtime.
@@ -130,17 +132,22 @@ function build() {
           console.error(String(error));
         }
       } else {
-        let js = content.toString();
+        const outFile = standaloneDir + '/out/atom.js';
+        fs.unlinkSync(outFile);
 
-        const css = fs.readFileSync(cssFile, 'utf8').replace(/"/g, "'").replace(/\n/g, ' ');
-        js = `const A_LOT_OF_CSS = "${css}";\n\n${
-          js.replace(
-            "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));",
-            "ShadowStyleSheet.textContent = A_LOT_OF_CSS;"
-          )
-        }`;
+        function write(data) {
+          fs.appendFileSync(outFile, data);
+        }
 
-        fs.writeFileSync(standaloneDir + '/out/atom.js', js);
+        for (const name of ['base', 'darwin', 'linux', 'win32']) {
+          const keymap = CSON.readFileSync(`${gitRoot}/keymaps/${name}.cson`);
+          write(`var STANDALONE_KEYMAP_${name.toUpperCase()} =`);
+          write(JSON.stringify(keymap));
+          write(';\n');
+        }
+
+        write(content);
+
         startedWatching = willWatch;
       }
     });
@@ -150,13 +157,12 @@ function build() {
     bundler
       .plugin(watchify)
       .on('update', bundle);
-    // watch this CSS file too
-    chokidar.watch(cssFile).on('all', () => {
+    // Example of how to watch a one-off file and have it rebulid everything:
+    chokidar.watch(gitRoot + '/keymaps').on('all', () => {
       if (startedWatching) {
         bundle();
       }
     });
-
   }
 
   bundle();

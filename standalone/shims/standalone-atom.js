@@ -125,6 +125,11 @@ fs.readFileSync = function(filePath, optionsOrEncoding) {
 };
 require('fs').readFileSync = fs.readFileSync;
 
+const {isDirectorySync} = fs;
+fs.isDirectorySync = function(filePath) {
+  return isDirectorySync(filePath);
+};
+
 // TODO: Find a better way to hack this.
 require('module').globalPaths = [];
 
