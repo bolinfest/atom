@@ -8,6 +8,11 @@ const browserify = require('browserify');
 const fs = require('fs-plus');
 const path = require('path');
 const {spawnSync} = require('child_process');
+const watchify = require('watchify');
+const chokidar = require('chokidar');
+
+const willWatch = process.argv[2] == '-w'; //ghetto
+let startedWatching = false;
 
 function build() {
   // This is necessary to set the compile-cache.
@@ -28,17 +33,27 @@ function build() {
   fs.makeTreeSync(nodeModules + '/atom/exports');
   // TODO(mbolin): Read in the new package.json and programmatically remove dependencies we don't
   // want to include right now and then write it back out.
-  fs.copyFileSync(gitRoot + '/package.json', nodeModules + '/atom/package.json');
+  copyFileSyncWatch(gitRoot + '/package.json', nodeModules + '/atom/package.json');
 
   // When we copy src/ and exports/, we must also transpile everything inside.
-  fs.copySync(gitRoot + '/src', nodeModules + '/atom/src');
-  fs.traverseTreeSync(nodeModules + '/atom/src', transpileFile, () => {});
-  fs.copySync(gitRoot + '/exports', nodeModules + '/atom/exports');
-  fs.traverseTreeSync(nodeModules + '/atom/exports', transpileFile, () => {});
-  fs.copySync(gitRoot + '/static', nodeModules + '/atom/static');
+  copySyncWatch(
+    gitRoot + '/src',
+    nodeModules + '/atom/src',
+    tree => fs.traverseTreeSync(tree, transpileFile, () => {})
+  );
+  copySyncWatch(
+    gitRoot + '/exports',
+    nodeModules + '/atom/exports',
+    tree => fs.traverseTreeSync(tree, transpileFile, () => {})
+  );
+  copySyncWatch(
+    gitRoot + '/static',
+    nodeModules + '/atom/static',
+    tree => {}
+  );
 
   // Insert some shims.
-  fs.copyFileSync(
+  copyFileSyncWatch(
     standaloneDir + '/shims/clipboard.js',
     nodeModules + '/atom/src/clipboard.js');
   [
@@ -51,14 +66,14 @@ function build() {
 
   // Call browserify on node_modules/atom/src/standalone-atom.js.
   const browserifyInputFile = nodeModules + '/atom/src/standalone-atom.js';
-  fs.copyFileSync(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
+  copyFileSyncWatch(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
+
   const modulesToFilter = new Set([
     // Modules with native dependencies that we do not expect to exercise at runtime.
     'onig-reg-exp',
     'runas',
     './squirrel-update',
     'tls',
-
     '../src/main-process/win-shell', // From exports/atom.js
   ]);
 
@@ -73,18 +88,13 @@ function build() {
     'scrollbar-style',
   ])
 
-  const builtins = Object.assign(
-    {atom: nodeModules + '/atom/exports/atom.js'},
-    require('browserify/lib/builtins'));
-
-  const browserifyJob = browserify(
+  const bundler = browserify(
     [browserifyInputFile],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
       filter(id) {
         return !modulesToFilter.has(id);
       },
-
       packageFilter(pkg, dir) {
         const {name} = pkg;
         if (fullShims.has(name)) {
@@ -95,18 +105,41 @@ function build() {
           return pkg;
         }
       },
-
-      builtins,
+      builtins: Object.assign(
+        {atom: nodeModules + '/atom/exports/atom.js'},
+        require('browserify/lib/builtins')
+      ),
+      cache: {},
+      packageCache: {},
+      verbose: true,
     }
-  );
+  ).on('log', console.log);
 
-  browserifyJob.on('error', exitOnError);
-  const bundle = browserifyJob.bundle();
-  bundle.on('error', exitOnError);
+  const bundle = ids => {
+    if (ids) {
+      console.log('Changed', ids);
+    }
+    bundler.bundle((error, content) => {
+      if (error != null) {
+        if (error.stack) {
+          console.error(error.stack);
+        } else {
+          console.error(String(error));
+        }
+      } else {
+        fs.writeFileSync(standaloneDir + '/out/atom.js', content);
+        startedWatching = willWatch;
+      }
+    });
+  };
 
-  const browserifyOutputFile = standaloneDir + '/out/atom.js';
-  fs.makeTreeSync(path.dirname(browserifyOutputFile));
-  bundle.pipe(fs.createWriteStream(browserifyOutputFile));
+  if (willWatch) {
+    bundler
+      .plugin(watchify)
+      .on('update', bundle);
+  }
+
+  bundle();
 }
 
 function transpileFile(absolutePath) {
@@ -130,7 +163,7 @@ function transpileFile(absolutePath) {
 function createShimWithPaths(moduleName, standaloneDir, nodeModules) {
   const moduleDirectory = `${nodeModules}/atom/node_modules/${moduleName}`;
   fs.makeTreeSync(moduleDirectory);
-  fs.copyFileSync(
+  copyFileSyncWatch(
     `${standaloneDir}/shims/${moduleName}.js`,
     `${moduleDirectory}/${moduleName}.js`);
   fs.writeFileSync(
@@ -143,14 +176,32 @@ function createShimWithPaths(moduleName, standaloneDir, nodeModules) {
     2));
 }
 
-function exitOnError(error) {
-  if (error.stack) {
-    console.error(error.stack);
+function copySyncWatch(from, to, then) {
+  fs.copySync(from, to);
+  then(to);
+  if (willWatch) {
+    console.log('Will watch', from);
+    chokidar.watch(from).on('all', (a, b) => {
+      if (!startedWatching) {
+        return;
+      }
+      fs.copySync(from, to);
+      then(to);
+    });
   }
-  else {
-    console.error(String(error));
+}
+
+function copyFileSyncWatch(from, to) {
+  fs.copyFileSync(from, to);
+  if (willWatch) {
+    console.log('Will watch file', from);
+    chokidar.watch(from).on('all', () => {
+      if (!startedWatching) {
+        return;
+      }
+      fs.copyFileSync(from, to);
+    });
   }
-  process.exit(1);
 }
 
 module.exports = {

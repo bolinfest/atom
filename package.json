@@ -21,6 +21,7 @@
     "browserify": "13.1.1",
     "cached-run-in-this-context": "0.4.1",
     "chai": "3.5.0",
+    "chokidar": "^1.6.1",
     "clear-cut": "^2.0.1",
     "coffee-script": "1.11.0",
     "color": "^0.7.3",
@@ -63,6 +64,7 @@
     "text-buffer": "9.2.12",
     "typescript-simple": "1.0.0",
     "underscore-plus": "^1.6.6",
+    "watchify": "^3.7.0",
     "winreg": "^1.2.1",
     "yargs": "^3.23.0"
   },
