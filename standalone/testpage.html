@@ -17,5 +17,11 @@
   }
   </script>
   <script src="out/atom.js" onerror="onAtomLoadError()"></script>
+  <script>
+  var buffer = new TextBuffer({
+    filePath: '/fake/filepath.txt',
+    text: 'Type in here to try things out!\n\nThe content type of this buffer is \'plain\', so there is no syntax highlighting.',
+  });
+  </script>
 </body>
 </html>

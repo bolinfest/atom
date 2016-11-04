@@ -55,8 +55,9 @@ function build() {
   const browserifyInputFile = nodeModules + '/atom/src/standalone-atom.js';
   fs.copyFileSync(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
   const modulesToFilter = new Set([
-    // Modules with native dependencies.
+    // Modules with native dependencies that we do not expect to exercise at runtime.
     'onig-reg-exp',
+    'runas',
     'tls',
 
     '../src/main-process/win-shell', // From exports/atom.js
