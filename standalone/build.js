@@ -53,8 +53,6 @@ function build() {
   fs.copyFileSync(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
   const modulesToFilter = new Set([
     // Modules with native dependencies that we do not expect to exercise at runtime.
-    'keyboard-layout',
-    'nslog',
     'onig-reg-exp',
     'runas',
     './squirrel-update',
@@ -64,7 +62,10 @@ function build() {
   ]);
 
   const fullShims = new Set([
+    'electron',
     'git-utils',
+    'keyboard-layout',
+    'nslog',
     'oniguruma',
     'pathwatcher',
     'marker-index',

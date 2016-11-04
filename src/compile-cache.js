@@ -202,6 +202,11 @@ Error.prototype.getRawStack = function () { // eslint-disable-line no-extend-nat
 }
 
 Object.keys(COMPILERS).forEach(function (extension) {
+  // This will happen when run in a browser.
+  if (require.extensions == null) {
+    return;
+  }
+
   var compiler = COMPILERS[extension]
 
   Object.defineProperty(require.extensions, extension, {
