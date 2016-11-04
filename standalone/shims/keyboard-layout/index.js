@@ -5,4 +5,7 @@ module.exports = {
   getCurrentKeyboardLayout() {
     return 'com.apple.keylayout.US';
   },
+  getCurrentKeymap() {
+    return null;
+  },
 };
