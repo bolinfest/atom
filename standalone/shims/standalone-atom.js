@@ -33,6 +33,8 @@ process.binding = (arg) => {
   return {};
 };
 
+process.resourcesPath = resourcePath;
+
 // process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
 process.env.ATOM_HOME = '/This/is/.atom';
 
@@ -114,12 +116,15 @@ fs.readFileSync = function(filePath, optionsOrEncoding) {
 };
 require('fs').readFileSync = fs.readFileSync;
 
-const FileSystemBlobStore = require('../src/file-system-blob-store.js');
-
 // TODO: Find a better way to hack this.
 require('module').globalPaths = [];
 
+// If we want to try a non-null blobStore:
+//     const FileSystemBlobStore = require('../src/file-system-blob-store.js');
+//     blobStore = new FileSystemBlobStore('/tmp');
+
 const initializeApplicationWindow = require('../src/initialize-application-window');
-initializeApplicationWindow({blobStore: new FileSystemBlobStore('/tmp')}).then(() => {
+initializeApplicationWindow({blobStore: null}).then(() => {
   console.log('created?');
 });
+console.log('initializeApplicationWindow called, but what about Promise resolution?');
