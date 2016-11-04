@@ -26,6 +26,14 @@ fs.statSyncNoException = function(filePath) {
   }
 };
 
+fs.makeTreeSync = function(filePath) {
+  if (filePath === process.env.ATOM_HOME) {
+    console.error(`Ignore fs.makeTreeSync(${filePath})`);
+  } else {
+    throw Error(`Unsupported fs.makeTreeSync(${filePath})`);
+  }
+}
+
 // Let's see if dev mode helps us out.
 process.argv = ['/path/to/Atom', '--dev'];
 
