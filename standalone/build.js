@@ -100,8 +100,6 @@ function build() {
     }
   );
 
-  browserifyJob.ignore('oniguruma');
-
   browserifyJob.on('error', exitOnError);
   const bundle = browserifyJob.bundle();
   bundle.on('error', exitOnError);
