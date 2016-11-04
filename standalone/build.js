@@ -133,7 +133,11 @@ function build() {
         }
       } else {
         const outFile = standaloneDir + '/out/atom.js';
-        fs.unlinkSync(outFile);
+        try {
+          fs.unlinkSync(outFile);
+        } catch(e) {
+          // do nothing
+        }
 
         function write(data) {
           fs.appendFileSync(outFile, data);
@@ -141,6 +145,11 @@ function build() {
 
         for (const name of ['base', 'darwin', 'linux', 'win32']) {
           const keymap = CSON.readFileSync(`${gitRoot}/keymaps/${name}.cson`);
+          if (keymap.body) {
+            delete keymap.body['cmd-c'];
+            delete keymap.body['cmd-v'];
+            delete keymap.body['cmd-x'];
+          }
           write(`var STANDALONE_KEYMAP_${name.toUpperCase()} =`);
           write(JSON.stringify(keymap));
           write(';\n');
