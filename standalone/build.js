@@ -63,7 +63,6 @@ function build() {
     nodeModules + '/atom/src/clipboard.js');
   [
     'electron',
-    'module',
     'remote',
     'screen',
     'shell',
@@ -94,7 +93,9 @@ function build() {
   ])
 
   const bundler = browserify(
-    [browserifyInputFile],
+    [
+      browserifyInputFile,
+    ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
       filter(id) {
@@ -111,9 +112,24 @@ function build() {
         }
       },
       builtins: Object.assign(
-        {atom: nodeModules + '/atom/exports/atom.js'},
-        require('browserify/lib/builtins')
+        {
+          atom: nodeModules + '/atom/exports/atom.js',
+        },
+        require('browserify/lib/builtins'),
+        {
+          buffer: require.resolve('browserfs/dist/shims/buffer.js'),
+          fs: require.resolve('browserfs/dist/shims/fs.js'),
+          path: require.resolve('browserfs/dist/shims/path.js'),
+        }
       ),
+      insertGlobalVars: {
+        // process, Buffer, and BrowserFS globals.
+        // BrowserFS global is not required if you include browserfs.js
+        // in a script tag.
+        process() { return "require('browserfs/dist/shims/process.js')" },
+        Buffer() { return "require('buffer').Buffer" },
+        BrowserFS() { return "require('" + require.resolve('browserfs') + "')" },
+      },
       cache: {},
       packageCache: {},
       verbose: true,
