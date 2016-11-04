@@ -5,11 +5,8 @@
 
 const {COMPILERS, compileFileAtPath, setAtomHomeDirectory} = require('../src/compile-cache');
 const browserify = require('browserify');
-const coffee = require('coffee-script');
 const fs = require('fs-plus');
 const path = require('path');
-// const season = require('season');
-// const {spawnSync} = require('child_process');
 
 function build() {
   // This is necessary to set the compile-cache.
