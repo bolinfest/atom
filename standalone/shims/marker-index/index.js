@@ -456,7 +456,7 @@ class MarkerIndex {
   insert(id, start, end) {
     let splitNodes;
     assertValidId(id);
-    this.rangeCache[id] = Range(start, end);
+    this.rangeCache[id] = new Range(start, end);
     if (splitNodes = this.rootNode.insert(new Set().add(id + ""), start, end)) {
       return this.rootNode = new Node(splitNodes);
     }
@@ -494,7 +494,7 @@ class MarkerIndex {
   getRange(id) {
     let start;
     if (start = this.getStart(id)) {
-      return Range(start, this.getEnd(id));
+      return new Range(start, this.getEnd(id));
     }
   }
 
