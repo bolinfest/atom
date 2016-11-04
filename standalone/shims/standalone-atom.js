@@ -7,9 +7,18 @@ process.binding = (arg) => {
 // require.extensions = {};
 
 process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
+process.env.ATOM_HOME = '/This/is/.atom';
 
-const {statSyncNoException} = require('fs-plus');
-require('fs-plus').statSyncNoException = function(filePath) {
+const fs = require('fs-plus');
+fs.getHomeDirectory = function() {
+  // You could imagine we would do:
+  //     return process.env.HOME || process.env.USERPROFILE;
+  // but we are in a web browser! Anyone who is calling this is suspicious.
+  return '/Users/zuck';
+}
+
+const {statSyncNoException} = fs;
+fs.statSyncNoException = function(filePath) {
   if (filePath == process.env.ATOM_DEV_RESOURCE_PATH) {
     return {}; // This is a dummy stat object.
   } else {

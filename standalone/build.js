@@ -72,6 +72,10 @@ function build() {
     'scrollbar-style',
   ])
 
+  const builtins = Object.assign(
+    {atom: nodeModules + '/atom/exports/atom.js'},
+    require('browserify/lib/builtins'));
+
   const browserifyJob = browserify(
     [browserifyInputFile],
     {
@@ -90,6 +94,8 @@ function build() {
           return pkg;
         }
       },
+
+      builtins,
     }
   );
 

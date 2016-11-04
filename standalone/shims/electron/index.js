@@ -2,10 +2,7 @@ module.exports = {
   app: {
     getPath(arg) {
       if (arg === 'home') {
-        // Ideally we would do:
-        //     return process.env.HOME || process.env.USERPROFILE;
-        // but we are in a web browser! Anyone who is calling this is suspicious.
-        return '/Users/zuck';
+        return require('fs-plus').getHomeDirectory();
       } else {
         console.error(`app.getPath() called with ${arg}: not supported.`);
       }
