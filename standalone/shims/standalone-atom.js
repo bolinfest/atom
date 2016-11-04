@@ -1,12 +1,39 @@
+window.setImmediate = function(callback) {
+  Promise.resolve().then(callback);
+};
+
+const resourcePath = '/Users/zuck/resourcePath';
+
+// This exists in a GitHub checkout of Atom, but I cannot seem to
+// find it under /Applications/Atom.app/.
+const templateConfigDirPath = resourcePath + '/dot-atom';
+const menusDirPath = resourcePath + '/menus';
+const menusConfigFile = menusDirPath + '/menu.json';
+
+window.location.hash = '#' + JSON.stringify({
+  initialPaths: [],
+  locationsToOpen: [{}],
+  // windowInitializationScript: 'atom/src/initialize-application-window.coffee',
+  resourcePath,
+  devMode: false,
+  safeMode: false,
+  profileStartup: false,
+  clearWindowState: false,
+  env: {
+    ATOM_HOME: '/This/is/.atom',
+    ATOM_DEV_RESOURCE_PATH: '/This/is/fake',
+  },
+  appVersion: '1.11.2',
+  atomHome: '',
+  shellLoadTime: 999,
+});
+
 process.binding = (arg) => {
   console.error(`process.binding() called with ${arg}: not supported.`);
   return {};
 };
 
-// compile-cache.js writes to this.
-// require.extensions = {};
-
-process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
+// process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
 process.env.ATOM_HOME = '/This/is/.atom';
 
 const fs = require('fs-plus');
@@ -34,8 +61,58 @@ fs.makeTreeSync = function(filePath) {
   }
 }
 
-// Let's see if dev mode helps us out.
-process.argv = ['/path/to/Atom', '--dev'];
+const {resolve} = fs;
+fs.resolve = function(loadPaths, pathToResolve, extensions) {
+  if (loadPaths === resourcePath && pathToResolve === 'dot-atom') {
+    // This is a special case in Config.load().
+    return templateConfigDirPath;
+  } else if (loadPaths === menusDirPath) {
+    return menusDirPath + '/menu.json';
+  } else {
+    return resolve(loadPaths, pathToResolve, extensions);
+  }
+};
+
+const {traverseTree} = fs;
+fs.traverseTree = function(rootPath, onFile, onDirectory) {
+  if (rootPath === templateConfigDirPath) {
+    console.warn(`Ignoring traversal of ${rootPath}: appears to be loading config.`);
+  } else {
+    return traverseTree(rootPath, onFile, onDirectory);
+  }
+};
+
+const DUMMY_STYLESHEET = '/dummy/stylesheet/path';
+const {resolveOnLoadPath} = fs;
+fs.resolveOnLoadPath = function(loadPaths, pathToResolve, extensions) {
+  if (Array.isArray(pathToResolve) && pathToResolve.length == 2 &&
+    pathToResolve[0] === 'css' && pathToResolve[1] === 'less'
+  ) {
+    return DUMMY_STYLESHEET;
+  } else {
+    return resolveOnLoadPath.apply(fs, arguments);
+  }
+};
+
+const {readFileSync} = fs;
+fs.readFileSync = function(filePath, optionsOrEncoding) {
+  if (optionsOrEncoding === 'utf8') {
+    if (filePath === menusConfigFile) {
+      console.warn(`Returning dummy menu data for readFileSync(${filePath})`);
+      return JSON.stringify({
+        menu: [],
+      });
+    } else if (filePath === DUMMY_STYLESHEET ||
+      filePath.startsWith(resourcePath)
+      ) {
+      console.warn(`Returning empty contents for readFileSync(${filePath})`);
+      return '';
+    }
+  }
+
+  return readFileSync(filePath, optionsOrEncoding);
+};
+require('fs').readFileSync = fs.readFileSync;
 
 const FileSystemBlobStore = require('../src/file-system-blob-store.js');
 

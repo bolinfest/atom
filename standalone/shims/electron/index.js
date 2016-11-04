@@ -1,6 +1,13 @@
 const listeners = {};
 const handlers = {};
 
+function dispatch(action, ...args) {
+  console.info('dispatch', action, ...args, listeners[action]);
+  (listeners[action] || []).forEach(function(listener) {
+    listener(action, ...args);
+  })
+}
+
 const temporaryWindowState = JSON.stringify({
   version: 1,
   project: {
@@ -12,6 +19,16 @@ const temporaryWindowState = JSON.stringify({
     deserializer: "Workspace"
   },
   fullScreen: false,
+  windowDimensions: {
+    x: 130,
+    y: 45,
+    width: 918,
+    height: 760,
+    maximized: false,
+  },
+  textEditors: {
+    editorGrammarOverrides: {},
+  },
 });
 
 module.exports = {
@@ -70,11 +87,19 @@ module.exports = {
     getCurrentWindow() {
       return {
         on: function() {},
-        isFullScreen: function() {},
+        isFullScreen: function() { return false; },
         getPosition() { return [0, 0]; },
         getSize() { return [800, 600]; },
         isMaximized() {},
       }
+    },
+
+    screen: {
+      getPrimaryDisplay() {
+        return {
+          workAreaSize: {},
+        };
+      },
     },
   },
 
