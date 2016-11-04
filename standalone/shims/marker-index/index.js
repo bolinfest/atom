@@ -476,7 +476,7 @@ class MarkerIndex {
       this.rootNode = new Node(splitNodes);
     }
     this.condenseIfNeeded();
-    
+
     console.warn('Mocked marker.splice to not crash');
     return { touch: [] };
   }
@@ -598,8 +598,17 @@ class MarkerIndex {
 };
 
 var assertValidId = function(id) {
-  if (typeof id !== 'string') {
-    throw new TypeError("Marker ID must be a string");
+  // Original:
+  // if (typeof id !== 'string') {
+  //   throw new TypeError("Marker ID must be a string");
+  // }
+
+  // It seems that marker ids are no longer required to be strings.
+  // In practice, they appear to be numbers because that is what
+  // TextBuffer.getNextMarkerId() vends out.
+  const type = typeof id;
+  if (type !== 'string' && type !== 'number') {
+    throw new TypeError("Marker ID must be a string or number");
   }
 };
 
