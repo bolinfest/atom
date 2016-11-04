@@ -53,8 +53,11 @@ function build() {
   fs.copyFileSync(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
   const modulesToFilter = new Set([
     // Modules with native dependencies that we do not expect to exercise at runtime.
+    'keyboard-layout',
+    'nslog',
     'onig-reg-exp',
     'runas',
+    './squirrel-update',
     'tls',
 
     '../src/main-process/win-shell', // From exports/atom.js
