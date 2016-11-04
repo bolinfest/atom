@@ -68,6 +68,8 @@ function build() {
   const browserifyInputFile = nodeModules + '/atom/src/standalone-atom.js';
   copyFileSyncWatch(standaloneDir + '/shims/standalone-atom.js', browserifyInputFile);
 
+  const cssFile = standaloneDir + '/styles.css';
+
   const modulesToFilter = new Set([
     // Modules with native dependencies that we do not expect to exercise at runtime.
     'onig-reg-exp',
@@ -115,6 +117,8 @@ function build() {
     }
   ).on('log', console.log);
 
+
+
   const bundle = ids => {
     if (ids) {
       console.log('Changed', ids);
@@ -127,7 +131,17 @@ function build() {
           console.error(String(error));
         }
       } else {
-        fs.writeFileSync(standaloneDir + '/out/atom.js', content);
+        let js = content.toString();
+
+        const css = fs.readFileSync(cssFile, 'utf8').replace(/"/g, "'").replace(/\n/g, ' ');
+        js = `const A_LOT_OF_CSS = "${css}";\n\n${
+          js.replace(
+            "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));",
+            "ShadowStyleSheet.textContent = A_LOT_OF_CSS;"
+          )
+        }`;
+
+        fs.writeFileSync(standaloneDir + '/out/atom.js', js);
         startedWatching = willWatch;
       }
     });
@@ -137,6 +151,13 @@ function build() {
     bundler
       .plugin(watchify)
       .on('update', bundle);
+    // watch this CSS file too
+    chokidar.watch(cssFile).on('all', () => {
+      if (startedWatching) {
+        bundle();
+      }
+    });
+
   }
 
   bundle();
@@ -154,10 +175,6 @@ function transpileFile(absolutePath) {
   // Replace the original file extension with .js.
   const outputFile = absolutePath.substring(0, absolutePath.length - ext.length) + '.js';
   fs.writeFileSync(outputFile, transpiledSource);
-
-  // TODO(mbolin): Find a cleaner workaround for this:
-  const toReplace = "ShadowStyleSheet.textContent = this.themes.loadLessStylesheet(require.resolve('../static/text-editor-shadow.less'));";
-  spawnSync('sed', ['-i', '', '-e', `s#${toReplace}#ShadowStyleSheet.textContent = "";#`, outputFile]);
 }
 
 function createShimWithPaths(moduleName, standaloneDir, nodeModules) {
@@ -182,11 +199,10 @@ function copySyncWatch(from, to, then) {
   if (willWatch) {
     console.log('Will watch', from);
     chokidar.watch(from).on('all', (a, b) => {
-      if (!startedWatching) {
-        return;
+      if (startedWatching) {
+        fs.copySync(from, to);
+        then(to);
       }
-      fs.copySync(from, to);
-      then(to);
     });
   }
 }
@@ -196,10 +212,9 @@ function copyFileSyncWatch(from, to) {
   if (willWatch) {
     console.log('Will watch file', from);
     chokidar.watch(from).on('all', () => {
-      if (!startedWatching) {
-        return;
+      if (startedWatching) {
+        fs.copyFileSync(from, to);
       }
-      fs.copyFileSync(from, to);
     });
   }
 }
