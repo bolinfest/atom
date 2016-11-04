@@ -51,7 +51,7 @@ function build() {
     nodeModules + '/atom/static',
     tree => {}
   );
-  copyFileSyncWatch(gitRoot + '/static/octicons.woff', standaloneDir + '/octicons.woff');
+  copyFileSyncWatch(gitRoot + '/static/octicons.woff', standaloneDir + '/out/octicons.woff');
 
   // Insert some shims.
   copyFileSyncWatch(
