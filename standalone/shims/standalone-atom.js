@@ -8,9 +8,12 @@ const resourcePath = '/Users/zuck/resourcePath';
 
 // This exists in a GitHub checkout of Atom, but I cannot seem to
 // find it under /Applications/Atom.app/.
-const templateConfigDirPath = resourcePath + '/dot-atom';
 const menusDirPath = resourcePath + '/menus';
 const menusConfigFile = menusDirPath + '/menu.json';
+
+// process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
+process.env.ATOM_HOME = '/This/is/.atom';
+process.resourcesPath = resourcePath;
 
 window.location.hash = '#' + JSON.stringify({
   initialPaths: [],
@@ -22,7 +25,7 @@ window.location.hash = '#' + JSON.stringify({
   profileStartup: false,
   clearWindowState: false,
   env: {
-    ATOM_HOME: '/This/is/.atom',
+    ATOM_HOME: process.env.ATOM_HOME,
     ATOM_DEV_RESOURCE_PATH: '/This/is/fake',
   },
   appVersion: '1.11.2',
@@ -35,12 +38,6 @@ process.binding = (arg) => {
   return {};
 };
 
-process.resourcesPath = resourcePath;
-
-// process.env.ATOM_DEV_RESOURCE_PATH = '/This/is/fake';
-process.env.ATOM_HOME = '/This/is/.atom';
-
-// BrowserFS.install(window);
 const inMemoryFs = new BrowserFS.FileSystem.InMemory();
 BrowserFS.initialize(inMemoryFs);
 
@@ -64,7 +61,15 @@ fsPlus.makeTreeSync(pathModule.join(resourcePath, 'keymaps'));
 fsPlus.makeTreeSync(pathModule.join(resourcePath, 'menus'));
 addFile(pathModule.join(resourcePath, 'menus/browser.cson'), JSON.stringify({menu: []}));
 
-const DUMMY_STYLESHEET = '/dummy/stylesheet/path';
+for (const pkgName in ATOM_PACKAGE_CONTENTS) {
+  const entryMap = ATOM_PACKAGE_CONTENTS[pkgName];
+  for (const fileName in entryMap) {
+    const contents = entryMap[fileName];
+    // addFile(`${process.env.ATOM_HOME}/packages/${pkgName}`)
+    addFile(fileName, contents);
+  }
+}
+
 fsPlus.resolveOnLoadPath = function(...args) {
   return fsPlus.resolve.apply(fsPlus, require('module').globalPaths.concat(args));
 };
@@ -80,4 +85,9 @@ require('module').paths = [];
 const initializeApplicationWindow = require('../src/initialize-application-window');
 initializeApplicationWindow({blobStore: null}).then(() => {
   require('electron').ipcRenderer.send('window-command', 'window:loaded');
+  // TODO(mbolin): Figure out how to avoid hardcoding these absolute paths:
+  // atom.packages.activatePackage(
+  //   '/Users/mbolin/src/atom-fork/standalone/node_modules/__atom_packages__/tabs');
+  // const {activate} = require('/Users/mbolin/src/atom-fork/standalone/node_modules/__atom_packages__/tabs/lib/main.js');
+  // activate();
 });

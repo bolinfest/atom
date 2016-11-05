@@ -40,12 +40,12 @@ function build() {
   copySyncWatch(
     gitRoot + '/src',
     nodeModules + '/atom/src',
-    tree => fs.traverseTreeSync(tree, transpileFile, () => {})
+    tree => fs.traverseTreeSync(tree, transpileFile, () => true)
   );
   copySyncWatch(
     gitRoot + '/exports',
     nodeModules + '/atom/exports',
-    tree => fs.traverseTreeSync(tree, transpileFile, () => {})
+    tree => fs.traverseTreeSync(tree, transpileFile, () => true)
   );
   copySyncWatch(
     gitRoot + '/static',
@@ -53,6 +53,38 @@ function build() {
     tree => {}
   );
   copyFileSyncWatch(gitRoot + '/static/octicons.woff', standaloneDir + '/out/octicons.woff');
+
+  const packageFilesWhoseContentsShouldBeInlined = {};
+
+  // Do copy-sync work for a fixed set of Atom packages that must be installed in your
+  // ~/.atom/dev/packages directory.
+  const atomPackages = [
+    'tabs',
+  ];
+  const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
+  const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
+  fs.makeTreeSync(atomPackagesDir);
+  for (const pkg of atomPackages) {
+    const destinationDir = `${atomPackagesDir}/${pkg}`;
+    copySyncWatch(
+      `${devPackagesDir}/${pkg}`,
+      destinationDir,
+      tree => fs.traverseTreeSync(tree, transpileFile, () => true));
+
+    const entries = packageFilesWhoseContentsShouldBeInlined[pkg] = {};
+    fs.traverseTreeSync(
+      destinationDir,
+      fileName => {
+        // What about .cson and .less files?
+        if (fileName.endsWith('.js') || fileName.endsWith('.json')) {
+          entries[fileName] = fs.readFileSync(fileName, 'utf8');
+        }
+      },
+      directoryName => {
+        return directoryName !== 'node_modules';
+      }
+    );
+  }
 
   // TODO: We need a build process for styles.css.
   copyFileSyncWatch(standaloneDir + '/styles.css', standaloneDir + '/out/styles.css');
@@ -90,11 +122,12 @@ function build() {
     'pathwatcher',
     'marker-index',
     'scrollbar-style',
-  ])
+  ]);
 
   const bundler = browserify(
     [
       browserifyInputFile,
+      `${atomPackagesDir}/tabs/lib/main.js`,
     ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
@@ -114,6 +147,7 @@ function build() {
       builtins: Object.assign(
         {
           atom: nodeModules + '/atom/exports/atom.js',
+          electron: `${standaloneDir}/shims/electron/index.js`
         },
         require('browserify/lib/builtins'),
         {
@@ -148,6 +182,7 @@ function build() {
           console.error(String(error));
         }
       } else {
+        // Clear out file before we start appending to it.
         const outFile = standaloneDir + '/out/atom.js';
         try {
           fs.unlinkSync(outFile);
@@ -166,10 +201,14 @@ function build() {
             delete keymap.body['cmd-v'];
             delete keymap.body['cmd-x'];
           }
-          write(`var STANDALONE_KEYMAP_${name.toUpperCase()} =`);
+          write(`var STANDALONE_KEYMAP_${name.toUpperCase()} = `);
           write(JSON.stringify(keymap));
           write(';\n');
         }
+
+        write(`var ATOM_PACKAGE_CONTENTS = `);
+        write(JSON.stringify(packageFilesWhoseContentsShouldBeInlined));
+        write(';\n');
 
         write(content);
 
