@@ -85,9 +85,13 @@ require('module').paths = [];
 const initializeApplicationWindow = require('../src/initialize-application-window');
 initializeApplicationWindow({blobStore: null}).then(() => {
   require('electron').ipcRenderer.send('window-command', 'window:loaded');
-  // TODO(mbolin): Figure out how to avoid hardcoding these absolute paths:
-  // atom.packages.activatePackage(
-  //   '/Users/mbolin/src/atom-fork/standalone/node_modules/__atom_packages__/tabs');
-  // const {activate} = require('/Users/mbolin/src/atom-fork/standalone/node_modules/__atom_packages__/tabs/lib/main.js');
-  // activate();
+  const pathToTabs = ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/tabs';
+  atom.packages.activatePackage(pathToTabs);
+
+  // For whatever reason, Atom seems to think tabs should not be auto-activated?
+  // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
+  // Though even if it could, it's unclear that it would load the path that Browserify
+  // has prepared, so we may be better off loading it explicitly.
+  const {activate} = require('../../__atom_packages__/tabs/lib/main.js');
+  activate();
 });

@@ -127,6 +127,8 @@ function build() {
   const bundler = browserify(
     [
       browserifyInputFile,
+
+      // TODO(mbolin): Extract this programmatically.
       `${atomPackagesDir}/tabs/lib/main.js`,
     ],
     {
@@ -208,6 +210,10 @@ function build() {
 
         write(`var ATOM_PACKAGE_CONTENTS = `);
         write(JSON.stringify(packageFilesWhoseContentsShouldBeInlined));
+        write(';\n');
+
+        write('var ATOM_PACKAGE_ROOT_FROM_BROWSERIFY = ');
+        write(JSON.stringify(atomPackagesDir));
         write(';\n');
 
         write(content);
