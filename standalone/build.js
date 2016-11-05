@@ -60,6 +60,7 @@ function build() {
   // ~/.atom/dev/packages directory.
   const atomPackages = [
     'tabs',
+//    'find-and-replace',
   ];
   const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
   const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
@@ -130,6 +131,7 @@ function build() {
 
       // TODO(mbolin): Extract this programmatically.
       `${atomPackagesDir}/tabs/lib/main.js`,
+//      `${atomPackagesDir}/find-and-replace/lib/find.js`,
     ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.

@@ -82,16 +82,26 @@ require('module').paths = [];
 //     const FileSystemBlobStore = require('../src/file-system-blob-store.js');
 //     blobStore = new FileSystemBlobStore('/tmp');
 
+
+
 const initializeApplicationWindow = require('../src/initialize-application-window');
 initializeApplicationWindow({blobStore: null}).then(() => {
   require('electron').ipcRenderer.send('window-command', 'window:loaded');
-  const pathToTabs = ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/tabs';
-  atom.packages.activatePackage(pathToTabs);
 
+  atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/tabs');
   // For whatever reason, Atom seems to think tabs should not be auto-activated?
   // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
   // Though even if it could, it's unclear that it would load the path that Browserify
   // has prepared, so we may be better off loading it explicitly.
-  const {activate} = require('../../__atom_packages__/tabs/lib/main.js');
-  activate();
+  require('../../__atom_packages__/tabs/lib/main.js').activate();
+
+/*
+ * In order to enable, find-and-replace, in
+ *   ~/.atom/dev/packages/find-and-replace/node_modules/atom-space-pen-views/lib/select-list-view.js
+ * comment the line
+ *   atom.themes.requireStylesheet(require.resolve('../stylesheets/select-list.less'));
+ * and uncomment the following two lines:
+ */
+  // atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/find-and-replace');
+  // require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
 });

@@ -6280,6 +6280,46 @@ atom-text-editor {
   line-height: 1.5;
 }
 
+.select-list .loading .loading-message::before {
+  font-family: 'Octicons Regular';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  text-decoration: none;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  content: "\f09e";
+}
+.select-list .loading .loading-message:before {
+  font-size: 1.1em;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 5px;
+}
+.select-list .loading .badge {
+  margin-left: 10px;
+}
+.select-list ol.list-group {
+  position: relative;
+  overflow-y: auto;
+  max-height: 312px;
+  margin: 10px 0 0 0;
+  padding: 0;
+}
+.select-list ol.list-group li {
+  display: block;
+}
+.select-list ol.list-group li .primary-line,
+.select-list ol.list-group li .secondary-line {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+
 .about {
   display: flex;
   flex-direction: column;
@@ -8958,46 +8998,6 @@ status-bar .cursor-position a:hover {
 }
 
 
-.select-list .loading .loading-message::before {
-  font-family: 'Octicons Regular';
-  font-weight: normal;
-  font-style: normal;
-  display: inline-block;
-  line-height: 1;
-  -webkit-font-smoothing: antialiased;
-  text-decoration: none;
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  content: "\f09e";
-}
-.select-list .loading .loading-message:before {
-  font-size: 1.1em;
-  width: 1.1em;
-  height: 1.1em;
-  margin-right: 5px;
-}
-.select-list .loading .badge {
-  margin-left: 10px;
-}
-.select-list ol.list-group {
-  position: relative;
-  overflow-y: auto;
-  max-height: 312px;
-  margin: 10px 0 0 0;
-  padding: 0;
-}
-.select-list ol.list-group li {
-  display: block;
-}
-.select-list ol.list-group li .primary-line,
-.select-list ol.list-group li .secondary-line {
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-
 .styleguide [data-name="icons"] .example-rendered {
   display: flex;
   flex-wrap: wrap;
@@ -9797,6 +9797,284 @@ atom-text-editor .wrap-guide {
   top: 0;
   background-color: rgba(171, 178, 191, 0.15);
   -webkit-transform: translateZ(0);
+}
+
+
+.symbols-view .list-group .character-match {
+  color: #d7dae0;
+  font-weight: bold;
+}
+
+
+atom-text-editor .find-result .region {
+  background-color: transparent;
+  border-radius: 3px;
+  border: 1px solid rgba(82, 139, 255, 0.24);
+  box-sizing: border-box;
+  z-index: 0;
+}
+atom-text-editor .current-result .region {
+  border-radius: 3px;
+  border: 1px solid #528bff;
+  box-sizing: border-box;
+  z-index: 0;
+}
+atom-text-editor .find-result,
+atom-text-editor .current-result {
+  display: none;
+}
+atom-workspace.find-visible atom-text-editor .find-result,
+atom-workspace.find-visible atom-text-editor .current-result {
+  display: block;
+}
+.find-and-replace,
+.project-find {
+  -webkit-user-select: none;
+  padding: 5px;
+  overflow-x: auto;
+}
+.find-and-replace .header,
+.project-find .header {
+  padding: 2.5px 5px;
+  min-width: 200px;
+}
+.find-and-replace .header-item,
+.project-find .header-item {
+  margin: 2.5px 0;
+}
+.find-and-replace .input-block,
+.project-find .input-block {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 200px;
+}
+.find-and-replace .input-block-item,
+.project-find .input-block-item {
+  display: flex;
+  flex: 1;
+  padding: 5px;
+}
+.find-and-replace .btn-group,
+.project-find .btn-group {
+  display: flex;
+  flex: 1;
+}
+.find-and-replace .btn-group .btn,
+.project-find .btn-group .btn {
+  flex: 1;
+}
+.find-and-replace .btn-group + .btn-group,
+.project-find .btn-group + .btn-group {
+  margin-left: 10px;
+}
+.find-and-replace .btn-group-options .btn,
+.project-find .btn-group-options .btn {
+  line-height: 1;
+}
+.find-and-replace .btn > .icon,
+.project-find .btn > .icon {
+  width: 20px;
+  height: 16px;
+  vertical-align: middle;
+  fill: currentColor;
+  stroke: currentColor;
+}
+.find-and-replace .description,
+.project-find .description {
+  display: inline-block;
+}
+.find-and-replace .description .subtle-info-message,
+.project-find .description .subtle-info-message {
+  padding-left: 5px;
+  color: rgba(157, 165, 180, 0.6);
+}
+.find-and-replace .description .subtle-info-message .highlight,
+.project-find .description .subtle-info-message .highlight {
+  color: #9da5b4;
+  font-weight: normal;
+}
+.find-and-replace .options-label,
+.project-find .options-label {
+  color: rgba(157, 165, 180, 0.6);
+  position: relative;
+}
+.find-and-replace .options-label .options,
+.project-find .options-label .options {
+  color: #9da5b4;
+}
+.find-and-replace .editor-container,
+.project-find .editor-container {
+  position: relative;
+}
+.find-and-replace .editor-container atom-text-editor,
+.project-find .editor-container atom-text-editor {
+  width: 100%;
+}
+.find-and-replace .input-block-item {
+  flex: 1 1 260px;
+}
+.find-and-replace .input-block-item--flex {
+  flex: 100 1 260px;
+}
+.find-and-replace .btn-group-find,
+.find-and-replace .btn-group-replace {
+  flex: 1 1 120px;
+}
+.find-and-replace .btn-group-replace-all,
+.find-and-replace .btn-group-options {
+  flex: 1 1 200px;
+}
+.find-and-replace .btn-group-options .btn {
+  flex: 1 1 25%;
+  padding: 0;
+  text-align: center;
+}
+.find-and-replace .find-container atom-text-editor {
+  padding-right: 64px;
+}
+.find-and-replace .find-meta-container {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  margin: 5px 5px 0 0;
+  z-index: 2;
+  font-size: .9em;
+  line-height: 25px;
+  pointer-events: none;
+}
+.find-and-replace .find-meta-container .result-counter {
+  margin-right: 10px;
+}
+.find-wrap-icon {
+  display: none;
+  position: absolute;
+  top: 50% !important;
+  left: 50% !important;
+  right: initial !important;
+  bottom: initial !important;
+  margin-top: -60px;
+  margin-left: -60px;
+  background: rgba(31, 34, 40, 0.45);
+  border-radius: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.find-wrap-icon:before {
+  font-size: 80px;
+  line-height: 120px;
+  height: 120px;
+  width: 120px;
+  color: #abb2bf;
+  opacity: .5;
+}
+.project-find .input-block-item {
+  flex: 1 1 220px;
+}
+.project-find .input-block-item--flex {
+  flex: 100 1 260px;
+}
+.project-find .btn-group-find {
+  flex: .6;
+}
+.project-find .loading,
+.project-find .preview-block,
+.project-find .error-messages,
+.project-find .filter-container {
+  display: none;
+}
+.preview-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.preview-pane .preview-header {
+  display: flex;
+  padding: 5px 5px 5px 10px;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: normal;
+  border-bottom: 1px solid #181a1f;
+  background-color: #282c34;
+}
+.preview-pane .preview-controls {
+  flex-shrink: 0;
+}
+.preview-pane .loading-spinner-tiny,
+.preview-pane .loading-spinner-tiny + .inline-block {
+  vertical-align: middle;
+}
+.preview-pane .no-results-overlay {
+  visibility: hidden;
+}
+.preview-pane.no-results .no-results-overlay {
+  visibility: visible;
+}
+.preview-pane .results-view {
+  overflow: auto;
+  position: relative;
+  padding: 0 10px;
+  flex: 1;
+}
+.preview-pane .results-view .search-result {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.preview-pane .results-view .line-number {
+  margin-right: 1ex;
+  text-align: right;
+  display: inline-block;
+}
+.preview-pane .results-view .selected .line-number {
+  color: #ffffff;
+}
+.preview-pane .results-view .path-match-number {
+  padding-left: 10px;
+  color: rgba(157, 165, 180, 0.6);
+}
+.preview-pane .results-view .preview {
+  word-break: break-all;
+  font-family: monospace;
+}
+.preview-pane .results-view .selected .highlight-info {
+  box-shadow: inset 0 0 1px #f5fafe;
+}
+.preview-pane .results-view .selected .highlight-error {
+  box-shadow: inset 0 0 1px #e89d96;
+}
+.preview-pane .results-view .selected .highlight-success {
+  box-shadow: inset 0 0 1px #72da87;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--escape,
+.replace-container atom-text-editor .syntax--regexp .syntax--escape {
+  color: #6494ed;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--range,
+.replace-container atom-text-editor .syntax--regexp .syntax--range,
+.find-container atom-text-editor .syntax--regexp .syntax--character-class,
+.replace-container atom-text-editor .syntax--regexp .syntax--character-class,
+.find-container atom-text-editor .syntax--regexp .syntax--wildcard,
+.replace-container atom-text-editor .syntax--regexp .syntax--wildcard {
+  color: #73c990;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--wildcard,
+.replace-container atom-text-editor .syntax--regexp .syntax--wildcard {
+  font-weight: bold;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--set,
+.replace-container atom-text-editor .syntax--regexp .syntax--set {
+  color: inherit;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--keyword,
+.replace-container atom-text-editor .syntax--regexp .syntax--keyword,
+.find-container atom-text-editor .syntax--regexp .syntax--punctuation,
+.replace-container atom-text-editor .syntax--regexp .syntax--punctuation {
+  color: #ff6347;
+  font-weight: normal;
+}
+.find-container atom-text-editor .syntax--regexp .syntax--replacement.syntax--variable,
+.replace-container atom-text-editor .syntax--regexp .syntax--replacement.syntax--variable {
+  color: #e2c08d;
 }
 
 
