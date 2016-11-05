@@ -1,639 +1,433 @@
-const Point = require("./point");
-const Range = require("./range");
-const { last, extend } = require("underscore-plus");
-const { addSet, subtractSet, intersectSet, setEqual } = require("./set-helpers");
+const Random = require('random-seed');
 
-let BRANCHING_THRESHOLD = 3;
+const Iterator = require('./iterator');
+const {addToSet} = require('./helpers');
+const {compare, isZero, traversal, traverse} = require('./point-helpers');
 
-class Node {
-  constructor(children) {
-    this.children = children;
-    this.ids = new Set;
-    this.extent = Point.ZERO;
-    for (let child of this.children) {
-      this.extent = this.extent.traverse(child.extent);
-      addSet(this.ids, child.ids);
+const MAX_PRIORITY = 2147483647 // max 32 bit signed int (unboxed in v8)
+
+module.exports = class MarkerIndex {
+  constructor (seed) {
+    this.random = new Random(seed)
+    this.root = null
+    this.startNodesById = {}
+    this.endNodesById = {}
+    this.iterator = new Iterator(this)
+    this.exclusiveMarkers = new Set()
+    this.nodePositionCache = new Map()
+  }
+
+  dump () {
+    return this.iterator.dump()
+  }
+
+  getRange (markerId) {
+    return [this.getStart(markerId), this.getEnd(markerId)]
+  }
+
+  getStart (markerId) {
+    return this.getNodePosition(this.startNodesById[markerId])
+  }
+
+  getEnd (markerId) {
+    return this.getNodePosition(this.endNodesById[markerId])
+  }
+
+  compare (markerId1, markerId2) {
+    switch (compare(this.getStart(markerId1), this.getStart(markerId2))) {
+      case -1:
+        return -1;
+      case 1:
+        return 1;
+      default:
+        return compare(this.getEnd(markerId2), this.getEnd(markerId1))
     }
   }
 
-  insert(ids, start, end) {
-    let newNodes;
-    let rangeIsEmpty = start.compare(end) === 0;
-    let childEnd = Point.ZERO;
-    let i = 0;
-    while (i < this.children.length) {
-      let newChildren;
-      let child = this.children[i++];
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
+  insert (markerId, start, end) {
+    let startNode = this.iterator.insertMarkerStart(markerId, start, end)
+    let endNode = this.iterator.insertMarkerEnd(markerId, start, end)
 
-      switch (childEnd.compare(start)) {
-        case -1: var childPrecedesRange = true; break;
-        case 1:  childPrecedesRange = false; break;
-        case 0:
-          if (child.hasEmptyRightmostLeaf()) {
-            childPrecedesRange = false;
-          } else {
-            childPrecedesRange = true;
-            if (rangeIsEmpty) {
-              ids = new Set(ids);
-              child.findContaining(child.extent, ids);
-            }
-          }
-          break;
-      }
-      if (childPrecedesRange) { continue; }
+    this.nodePositionCache.set(startNode, start)
+    this.nodePositionCache.set(endNode, end)
 
-      switch (childStart.compare(end)) {
-        case -1: var childFollowsRange = false; break;
-        case 1:  childFollowsRange = true; break;
-        case 0:  childFollowsRange = !(child.hasEmptyLeftmostLeaf() || rangeIsEmpty); break;
-      }
-      if (childFollowsRange) { break; }
+    startNode.startMarkerIds.add(markerId)
+    endNode.endMarkerIds.add(markerId)
 
-      let relativeStart = Point.max(Point.ZERO, start.traversalFrom(childStart));
-      let relativeEnd = Point.min(child.extent, end.traversalFrom(childStart));
-      if (newChildren = child.insert(ids, relativeStart, relativeEnd)) {
-        this.children.splice(i - 1, 1, ...newChildren);
-        i += newChildren.length - 1;
-      }
-      if (rangeIsEmpty) { break; }
-    }
+    startNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(startNode)
 
-    if (newNodes = this.splitIfNeeded()) {
-      return newNodes;
+    endNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(endNode)
+
+    this.startNodesById[markerId] = startNode
+    this.endNodesById[markerId] = endNode
+  }
+
+  setExclusive (markerId, exclusive) {
+    if (exclusive) {
+      this.exclusiveMarkers.add(markerId)
     } else {
-      addSet(this.ids, ids);
-      return;
+      this.exclusiveMarkers.delete(markerId)
     }
   }
 
-  delete(id) {
-    if (!this.ids.delete(id)) { return; }
-    let i = 0;
-    return (() => {
-      let result = [];
-      while (i < this.children.length) {
-        let item;
-        this.children[i].delete(id);
-        if (!this.mergeChildrenIfNeeded(i - 1)) { item = i++; }
-        result.push(item);
-      }
-      return result;
-    })();
+  isExclusive (markerId) {
+    return this.exclusiveMarkers.has(markerId)
   }
 
-  splice(position, oldExtent, newExtent, exclusiveIds, precedingIds, followingIds) {
-    let oldRangeIsEmpty = oldExtent.isZero();
-    let spliceOldEnd = position.traverse(oldExtent);
-    let spliceNewEnd = position.traverse(newExtent);
-    let extentAfterChange = this.extent.traversalFrom(spliceOldEnd);
-    this.extent = spliceNewEnd.traverse(Point.max(Point.ZERO, extentAfterChange));
+  delete (markerId) {
+    let startNode = this.startNodesById[markerId]
+    let endNode = this.endNodesById[markerId]
 
-    if (position.isZero() && oldRangeIsEmpty) {
-      __guard__(precedingIds, x => x.forEach(id => {
-        if (!exclusiveIds.has(id)) {
-          return this.ids.add(id);
+    let node = startNode
+    while (node) {
+      node.rightMarkerIds.delete(markerId)
+      node = node.parent
+    }
+
+    node = endNode
+    while (node) {
+      node.leftMarkerIds.delete(markerId)
+      node = node.parent
+    }
+
+    startNode.startMarkerIds.delete(markerId)
+    endNode.endMarkerIds.delete(markerId)
+
+    if (!startNode.isMarkerEndpoint()) {
+      this.deleteNode(startNode)
+    }
+
+    if (endNode !== startNode && !endNode.isMarkerEndpoint()) {
+      this.deleteNode(endNode)
+    }
+
+    delete this.startNodesById[markerId]
+    delete this.endNodesById[markerId]
+  }
+
+  splice (start, oldExtent, newExtent) {
+    this.nodePositionCache.clear()
+
+    let invalidated = {
+      touch: new Set,
+      inside: new Set,
+      overlap: new Set,
+      surround: new Set
+    }
+
+    if (!this.root || isZero(oldExtent) && isZero(newExtent)) return invalidated
+
+    let isInsertion = isZero(oldExtent)
+    let startNode = this.iterator.insertSpliceBoundary(start, false)
+    let endNode = this.iterator.insertSpliceBoundary(traverse(start, oldExtent), isInsertion)
+
+    startNode.priority = -1
+    this.bubbleNodeUp(startNode)
+    endNode.priority = -2
+    this.bubbleNodeUp(endNode)
+
+    let startingInsideSplice = new Set
+    let endingInsideSplice = new Set
+
+    if (isInsertion) {
+      startNode.startMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId)) {
+          startNode.startMarkerIds.delete(markerId)
+          startNode.rightMarkerIds.delete(markerId)
+          endNode.startMarkerIds.add(markerId)
+          this.startNodesById[markerId] = endNode
         }
-      }
-      ));
-    }
+      })
 
-    let i = 0;
-    let childEnd = Point.ZERO;
-    while (i < this.children.length) {
-      let child = this.children[i];
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
-
-      switch (childEnd.compare(position)) {
-        case -1: var childPrecedesRange = true; break;
-        case 0:  childPrecedesRange = !(child.hasEmptyRightmostLeaf() && oldRangeIsEmpty); break;
-        case 1:  childPrecedesRange = false; break;
-      }
-
-      if (!childPrecedesRange) {
-        if (remainderToDelete != null) {
-          if (remainderToDelete.isPositive()) {
-            let previousExtent = child.extent;
-            child.splice(Point.ZERO, remainderToDelete, Point.ZERO);
-            var remainderToDelete = remainderToDelete.traversalFrom(previousExtent);
-            childEnd = childStart.traverse(child.extent);
+      startNode.endMarkerIds.forEach(markerId => {
+        if (!this.isExclusive(markerId) || endNode.startMarkerIds.has(markerId)) {
+          startNode.endMarkerIds.delete(markerId)
+          if (!endNode.startMarkerIds.has(markerId)) {
+            startNode.rightMarkerIds.add(markerId)
           }
-        } else {
-          if (oldRangeIsEmpty) {
-            let left;
-            let left1;
-            var previousChildIds = (left = __guard__(this.children[i - 1], x1 => x1.getRightmostIds())) != null ? left : precedingIds;
-            var nextChildIds = (left1 = __guard__(this.children[i + 1], x2 => x2.getLeftmostIds())) != null ? left1 : followingIds;
-          }
-          let splitNodes = child.splice(
-            position.traversalFrom(childStart),
-            oldExtent,
-            newExtent,
-            exclusiveIds,
-            previousChildIds,
-            nextChildIds
-          );
-          if (splitNodes) { this.children.splice(i, 1, ...splitNodes); }
-          var remainderToDelete = spliceOldEnd.traversalFrom(childEnd);
-          childEnd = childStart.traverse(child.extent);
+          endNode.endMarkerIds.add(markerId)
+          this.endNodesById[markerId] = endNode
         }
-      }
+      })
+    } else {
+      this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
 
-      if (!this.mergeChildrenIfNeeded(i - 1)) { i++; }
+      endingInsideSplice.forEach(markerId => {
+        endNode.endMarkerIds.add(markerId)
+        if (!startingInsideSplice.has(markerId)) {
+          startNode.rightMarkerIds.add(markerId)
+        }
+        this.endNodesById[markerId] = endNode
+      })
+
+      endNode.endMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
+          endingInsideSplice.add(markerId)
+        }
+      })
+
+      startingInsideSplice.forEach(markerId => {
+        endNode.startMarkerIds.add(markerId)
+        this.startNodesById[markerId] = endNode
+      })
+
+      startNode.startMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId) && !startNode.endMarkerIds.has(markerId)) {
+          startNode.startMarkerIds.delete(markerId)
+          startNode.rightMarkerIds.delete(markerId)
+          endNode.startMarkerIds.add(markerId)
+          this.startNodesById[markerId] = endNode
+          startingInsideSplice.add(markerId)
+        }
+      })
     }
-    return this.splitIfNeeded();
+
+    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice)
+
+    startNode.right = null
+    endNode.leftExtent = traverse(start, newExtent)
+
+    if (compare(startNode.leftExtent, endNode.leftExtent) === 0) {
+      endNode.startMarkerIds.forEach(markerId => {
+        startNode.startMarkerIds.add(markerId)
+        startNode.rightMarkerIds.add(markerId)
+        this.startNodesById[markerId] = startNode
+      })
+      endNode.endMarkerIds.forEach(markerId => {
+        startNode.endMarkerIds.add(markerId)
+        if (endNode.leftMarkerIds.has(markerId)) {
+          startNode.leftMarkerIds.add(markerId)
+          endNode.leftMarkerIds.delete(markerId)
+        }
+        this.endNodesById[markerId] = startNode
+      })
+      this.deleteNode(endNode)
+    } else if (endNode.isMarkerEndpoint()) {
+      endNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeDown(endNode)
+    } else {
+      this.deleteNode(endNode)
+    }
+
+    if (startNode.isMarkerEndpoint()) {
+      startNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeDown(startNode)
+    } else {
+      this.deleteNode(startNode)
+    }
+
+    return invalidated
   }
 
-  getStart(id) {
-    if (!this.ids.has(id)) { return; }
-    let childEnd = Point.ZERO;
-    for (let child of this.children) {
-      let startRelativeToChild;
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
-      if (startRelativeToChild = child.getStart(id)) {
-        return childStart.traverse(startRelativeToChild);
-      }
-    }
+  findIntersecting (start, end = start) {
+    let intersecting = new Set()
+    this.iterator.findIntersecting(start, end, intersecting)
+    return intersecting
   }
 
-  getEnd(id) {
-    if (!this.ids.has(id)) { return; }
-    let childEnd = Point.ZERO;
-    for (let child of this.children) {
-      let endRelativeToChild;
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
-      if (endRelativeToChild = child.getEnd(id)) {
-        var end = childStart.traverse(endRelativeToChild);
-      } else if (end != null) {
-        break;
-      }
+  findContaining (start, end = start) {
+    let containing = new Set()
+    this.iterator.findContaining(start, containing)
+    if (compare(end, start) !== 0) {
+      let containingEnd = new Set()
+      this.iterator.findContaining(end, containingEnd)
+      containing.forEach(function (markerId) {
+        if (!containingEnd.has(markerId)) containing.delete(markerId)
+      })
     }
-    return end;
+    return containing
   }
 
-  dump(ids, offset, snapshot) {
-    for (let child of this.children) {
-      if ((!ids) || setsOverlap(ids, child.ids)) {
-        offset = child.dump(ids, offset, snapshot);
+  findContainedIn (start, end) {
+    let containedIn = new Set()
+    this.iterator.findContainedIn(start, end, containedIn)
+    return containedIn
+  }
+
+  findStartingIn (start, end) {
+    let startingIn = new Set()
+    this.iterator.findStartingIn(start, end, startingIn)
+    return startingIn
+  }
+
+  findEndingIn (start, end) {
+    let endingIn = new Set()
+    this.iterator.findEndingIn(start, end, endingIn)
+    return endingIn
+  }
+
+  findStartingAt (position) {
+    return this.findStartingIn(position, position)
+  }
+
+  findEndingAt (position) {
+    return this.findEndingIn(position, position)
+  }
+
+  getNodePosition (node) {
+    let position = this.nodePositionCache.get(node)
+    if (!position) {
+      position = node.leftExtent
+      let currentNode = node
+      while (currentNode.parent) {
+        if (currentNode.parent.right === currentNode) {
+          position = traverse(currentNode.parent.leftExtent, position)
+        }
+        currentNode = currentNode.parent
+      }
+      this.nodePositionCache.set(node, position)
+    }
+    return position
+  }
+
+  deleteNode (node) {
+    this.nodePositionCache.delete(node)
+    node.priority = Infinity
+    this.bubbleNodeDown(node)
+    if (node.parent) {
+      if (node.parent.left === node) {
+        node.parent.left = null
       } else {
-        offset = offset.traverse(child.extent);
+        node.parent.right = null
       }
-    }
-    return offset;
-  }
-
-  findContaining(point, set) {
-    let childEnd = Point.ZERO;
-    for (let child of this.children) {
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
-      if (childEnd.compare(point) < 0) { continue; }
-      if (childStart.compare(point) > 0) { break; }
-      child.findContaining(point.traversalFrom(childStart), set);
-    }
-  }
-
-  findIntersecting(start, end, set) {
-    if (start.isZero() && end.compare(this.extent) === 0) {
-      addSet(set, this.ids);
-      return;
-    }
-
-    let childEnd = Point.ZERO;
-    for (let child of this.children) {
-      let childStart = childEnd;
-      childEnd = childStart.traverse(child.extent);
-      if (childEnd.compare(start) < 0) { continue; }
-      if (childStart.compare(end) > 0) { break; }
-      child.findIntersecting(
-        Point.max(Point.ZERO, start.traversalFrom(childStart)),
-        Point.min(child.extent, end.traversalFrom(childStart)),
-        set
-      );
-    }
-  }
-
-  findStartingAt(position, result, previousIds) {
-    for (let child of this.children) {
-      if (position.isNegative()) { break; }
-      let nextPosition = position.traversalFrom(child.extent);
-      if (!nextPosition.isPositive()) {
-        child.findStartingAt(position, result, previousIds);
-      }
-      previousIds = child.ids;
-      position = nextPosition;
-    }
-  }
-
-  findEndingAt(position, result) {
-    for (let child of this.children) {
-      if (position.isNegative()) { break; }
-      let nextPosition = position.traversalFrom(child.extent);
-      if (!nextPosition.isPositive()) {
-        child.findEndingAt(position, result);
-      }
-      position = nextPosition;
-    }
-  }
-
-  hasEmptyRightmostLeaf() {
-    return this.children[this.children.length - 1].hasEmptyRightmostLeaf();
-  }
-
-  hasEmptyLeftmostLeaf() {
-    return this.children[0].hasEmptyLeftmostLeaf();
-  }
-
-  getLeftmostIds() {
-    return this.children[0].getLeftmostIds();
-  }
-
-  getRightmostIds() {
-    return last(this.children).getRightmostIds();
-  }
-
-  merge(other) {
-    let childCount = this.children.length + other.children.length;
-    if (childCount <= BRANCHING_THRESHOLD + 1) {
-      if (last(this.children).merge(other.children[0])) {
-        other.children.shift();
-        childCount--;
-      }
-
-      if (childCount <= BRANCHING_THRESHOLD) {
-        this.extent = this.extent.traverse(other.extent);
-        addSet(this.ids, other.ids);
-        this.children.push(...other.children);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  splitIfNeeded() {
-    let branchingRatio;
-    if ((branchingRatio = this.children.length / BRANCHING_THRESHOLD) > 1) {
-      let splitIndex = Math.ceil(branchingRatio);
-      return [new Node(this.children.slice(0, splitIndex)), new Node(this.children.slice(splitIndex))];
-    }
-  }
-
-  mergeChildrenIfNeeded(i) {
-    if (__guard__(this.children[i], x => x.merge(this.children[i + 1]))) {
-      this.children.splice(i + 1, 1);
-      return true;
     } else {
-      return false;
+      this.root = null
     }
   }
 
-  toString(indentLevel=0) {
-    let next;
-    let indent = "";
-    let iterable = __range__(0, indentLevel, false);
-    for (let j = 0; j < iterable.length; j++) { let i = iterable[j]; indent += " "; }
+  bubbleNodeUp (node) {
+    while (node.parent && node.priority < node.parent.priority) {
+      if (node === node.parent.left) {
+        this.rotateNodeRight(node)
+      } else {
+        this.rotateNodeLeft(node)
+      }
+    }
+  }
 
-    let ids = [];
-    let values = this.ids.values();
-    while (!(next = values.next()).done) {
-      ids.push(next.value);
+  bubbleNodeDown (node) {
+    while (true) {
+      let leftChildPriority = node.left ? node.left.priority : Infinity
+      let rightChildPriority = node.right ? node.right.priority : Infinity
+
+      if (leftChildPriority < rightChildPriority && leftChildPriority < node.priority) {
+        this.rotateNodeRight(node.left)
+      } else if (rightChildPriority < node.priority) {
+        this.rotateNodeLeft(node.right)
+      } else {
+        break
+      }
+    }
+  }
+
+  rotateNodeLeft (pivot) {
+    let root = pivot.parent
+
+    if (root.parent) {
+      if (root.parent.left === root) {
+        root.parent.left = pivot
+      } else {
+        root.parent.right = pivot
+      }
+    } else {
+      this.root = pivot
+    }
+    pivot.parent = root.parent
+
+    root.right = pivot.left
+    if (root.right) {
+      root.right.parent = root
     }
 
-    return indent + "Node " + this.extent + " (" + (ids.join(" ")) + ")\n" + (this.children.map(c => c.toString(indentLevel + 2)).join("\n"));
+    pivot.left = root
+    pivot.left.parent = pivot
+
+    pivot.leftExtent = traverse(root.leftExtent, pivot.leftExtent)
+
+    addToSet(pivot.rightMarkerIds, root.rightMarkerIds)
+
+    pivot.leftMarkerIds.forEach(function (markerId) {
+      if (root.leftMarkerIds.has(markerId)) {
+        root.leftMarkerIds.delete(markerId)
+      } else {
+        pivot.leftMarkerIds.delete(markerId)
+        root.rightMarkerIds.add(markerId)
+      }
+    })
+  }
+
+  rotateNodeRight (pivot) {
+    let root = pivot.parent
+
+    if (root.parent) {
+      if (root.parent.left === root) {
+        root.parent.left = pivot
+      } else {
+        root.parent.right = pivot
+      }
+    } else {
+      this.root = pivot
+    }
+    pivot.parent = root.parent
+
+    root.left = pivot.right
+    if (root.left) {
+      root.left.parent = root
+    }
+
+    pivot.right = root
+    pivot.right.parent = pivot
+
+    root.leftExtent = traversal(root.leftExtent, pivot.leftExtent)
+
+    root.leftMarkerIds.forEach(function (markerId) {
+      if (!pivot.startMarkerIds.has(markerId)) { // don't do this when pivot is at position 0
+        pivot.leftMarkerIds.add(markerId)
+      }
+    })
+
+    pivot.rightMarkerIds.forEach(function (markerId) {
+      if (root.rightMarkerIds.has(markerId)) {
+        root.rightMarkerIds.delete(markerId)
+      } else {
+        pivot.rightMarkerIds.delete(markerId)
+        root.leftMarkerIds.add(markerId)
+      }
+    })
+  }
+
+  getStartingAndEndingMarkersWithinSubtree (node, startMarkerIds, endMarkerIds) {
+    if (node == null) return
+
+    this.getStartingAndEndingMarkersWithinSubtree(node.left, startMarkerIds, endMarkerIds)
+    addToSet(startMarkerIds, node.startMarkerIds)
+    addToSet(endMarkerIds, node.endMarkerIds)
+    this.getStartingAndEndingMarkersWithinSubtree(node.right, startMarkerIds, endMarkerIds)
+  }
+
+  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice) {
+    addToSet(invalidated.touch, startNode.endMarkerIds)
+    addToSet(invalidated.touch, endNode.startMarkerIds)
+    startNode.rightMarkerIds.forEach((markerId) => {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+    })
+    endNode.leftMarkerIds.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+    })
+    startingInsideSplice.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+      invalidated.overlap.add(markerId)
+      if (endingInsideSplice.has(markerId)) invalidated.surround.add(markerId)
+    })
+    endingInsideSplice.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+      invalidated.overlap.add(markerId)
+    })
   }
 }
-
-class Leaf {
-  constructor(extent, ids) {
-    this.extent = extent;
-    this.ids = ids;
-  }
-
-  insert(ids, start, end) {
-    // If the given range matches the start and end of this leaf exactly, add
-    // the given id to this leaf. Otherwise, split this leaf into up to 3 leaves,
-    // adding the id to the portion of this leaf that intersects the given range.
-    if (start.isZero() && end.compare(this.extent) === 0) {
-      addSet(this.ids, ids);
-      return;
-    } else {
-      let newIds = new Set(this.ids);
-      addSet(newIds, ids);
-      let newLeaves = [];
-      if (start.isPositive()) { newLeaves.push(new Leaf(start, new Set(this.ids))); }
-      newLeaves.push(new Leaf(end.traversalFrom(start), newIds));
-      if (this.extent.compare(end) > 0) { newLeaves.push(new Leaf(this.extent.traversalFrom(end), new Set(this.ids))); }
-      return newLeaves;
-    }
-  }
-
-  delete(id) {
-    return this.ids.delete(id);
-  }
-
-  splice(position, spliceOldExtent, spliceNewExtent, exclusiveIds, precedingIds, followingIds) {
-    if (position.isZero() && spliceOldExtent.isZero()) {
-
-      let leftIds = new Set(precedingIds);
-      addSet(leftIds, this.ids);
-      subtractSet(leftIds, exclusiveIds);
-
-      if (this.extent.isZero()) {
-        precedingIds.forEach(id => {
-          if (!followingIds.has(id)) { return this.ids.delete(id); }
-        }
-        );
-      }
-
-      return [new Leaf(spliceNewExtent, leftIds), this];
-    } else {
-      let spliceOldEnd = position.traverse(spliceOldExtent);
-      let spliceNewEnd = position.traverse(spliceNewExtent);
-      let extentAfterChange = this.extent.traversalFrom(spliceOldEnd);
-      this.extent = spliceNewEnd.traverse(Point.max(Point.ZERO, extentAfterChange));
-      return;
-    }
-  }
-
-  getStart(id) {
-    if (this.ids.has(id)) { return Point.ZERO; }
-  }
-
-  getEnd(id) {
-    if (this.ids.has(id)) { return this.extent; }
-  }
-
-  dump(ids, offset, snapshot) {
-    let next;
-    let end = offset.traverse(this.extent);
-    let values = this.ids.values();
-    while (!(next = values.next()).done) {
-      let id = next.value;
-      if ((!ids) || ids.has(id)) {
-        if (snapshot[id] == null) { snapshot[id] = templateRange(); }
-        if (snapshot[id].start == null) { snapshot[id].start = offset; }
-        snapshot[id].end = end;
-      }
-    }
-    return end;
-  }
-
-  findEndingAt(position, result) {
-    if (position.isEqual(this.extent)) {
-      addSet(result, this.ids);
-    } else if (position.isZero()) {
-      subtractSet(result, this.ids);
-    }
-  }
-
-  findStartingAt(position, result, previousIds) {
-    if (position.isZero()) {
-      this.ids.forEach(function(id) {
-        if (!previousIds.has(id)) { return result.add(id); }
-      });
-    }
-  }
-
-  findContaining(point, set) {
-    return addSet(set, this.ids);
-  }
-
-  findIntersecting(start, end, set) {
-    return addSet(set, this.ids);
-  }
-
-  hasEmptyRightmostLeaf() {
-    return this.extent.isZero();
-  }
-
-  hasEmptyLeftmostLeaf() {
-    return this.extent.isZero();
-  }
-
-  getLeftmostIds() {
-    return this.ids;
-  }
-
-  getRightmostIds() {
-    return this.ids;
-  }
-
-  merge(other) {
-    if (setEqual(this.ids, other.ids) || (this.extent.isZero() && other.extent.isZero())) {
-      this.extent = this.extent.traverse(other.extent);
-      addSet(this.ids, other.ids);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  toString(indentLevel=0) {
-    let next;
-    let indent = "";
-    let iterable = __range__(0, indentLevel, false);
-    for (let j = 0; j < iterable.length; j++) { let i = iterable[j]; indent += " "; }
-
-    let ids = [];
-    let values = this.ids.values();
-    while (!(next = values.next()).done) {
-      ids.push(next.value);
-    }
-
-    return `${indent}Leaf ${this.extent} (${ids.join(" ")})`;
-  }
-}
-
-class MarkerIndex {
-  constructor() {
-    this.clear();
-  }
-
-  insert(id, start, end) {
-    let splitNodes;
-    assertValidId(id);
-    this.rangeCache[id] = new Range(start, end);
-    if (splitNodes = this.rootNode.insert(new Set().add(id + ""), start, end)) {
-      return this.rootNode = new Node(splitNodes);
-    }
-  }
-
-  delete(id) {
-    assertValidId(id);
-    delete this.rangeCache[id];
-    this.rootNode.delete(id);
-    return this.condenseIfNeeded();
-  }
-
-  splice(position, oldExtent, newExtent) {
-    let splitNodes;
-    this.clearRangeCache();
-    if (splitNodes = this.rootNode.splice(position, oldExtent, newExtent, this.exclusiveIds, new Set, new Set)) {
-      this.rootNode = new Node(splitNodes);
-    }
-    this.condenseIfNeeded();
-
-    // vjeux: changed
-    return { touch: [] };
-  }
-
-  isExclusive(id) {
-    return this.exclusiveIds.has(id);
-  }
-
-  setExclusive(id, isExclusive) {
-    assertValidId(id);
-    if (isExclusive) {
-      return this.exclusiveIds.add(id);
-    } else {
-      return this.exclusiveIds.delete(id);
-    }
-  }
-
-  getRange(id) {
-    let start;
-    if (start = this.getStart(id)) {
-      return new Range(start, this.getEnd(id));
-    }
-  }
-
-  getStart(id) {
-    if (!this.rootNode.ids.has(id)) { return; }
-
-    let entry = this.rangeCache[id] != null ? this.rangeCache[id] : (this.rangeCache[id] = templateRange());
-    return entry.start != null ? entry.start : (entry.start = this.rootNode.getStart(id));
-  }
-
-  getEnd(id) {
-    if (!this.rootNode.ids.has(id)) { return; }
-
-    let entry = this.rangeCache[id] != null ? this.rangeCache[id] : (this.rangeCache[id] = templateRange());
-    return entry.end != null ? entry.end : (entry.end = this.rootNode.getEnd(id));
-  }
-
-  findContaining(start, end) {
-    let containing = new Set;
-    this.rootNode.findContaining(start, containing);
-    if ((end != null) && end.compare(start) !== 0) {
-      let containingEnd = new Set;
-      this.rootNode.findContaining(end, containingEnd);
-      containing.forEach(function(id) { if (!containingEnd.has(id)) { return containing.delete(id); } });
-    }
-    return containing;
-  }
-
-  findContainedIn(start, end = start) {
-    let result = this.findStartingIn(start, end);
-    subtractSet(result, this.findIntersecting(end.traverse(Point(0, 1))));
-    return result;
-  }
-
-  findIntersecting(start, end = start) {
-    let intersecting = new Set;
-    this.rootNode.findIntersecting(start, end, intersecting);
-    return intersecting;
-  }
-
-  findStartingIn(start, end) {
-    if (end != null) {
-      var result = this.findIntersecting(start, end);
-      if (start.isPositive()) {
-        if (start.column === 0) {
-          var previousPoint = Point(start.row - 1, Infinity);
-        } else {
-          var previousPoint = Point(start.row, start.column - 1);
-        }
-        subtractSet(result, this.findIntersecting(previousPoint));
-      }
-      return result;
-    } else {
-      var result = new Set;
-      this.rootNode.findStartingAt(start, result, new Set);
-      return result;
-    }
-  }
-
-  findEndingIn(start, end) {
-    if (end != null) {
-      var result = this.findIntersecting(start, end);
-      subtractSet(result, this.findIntersecting(end.traverse(Point(0, 1))));
-      return result;
-    } else {
-      var result = new Set;
-      this.rootNode.findEndingAt(start, result);
-      return result;
-    }
-  }
-
-  clear() {
-    this.rootNode = new Leaf(Point.INFINITY, new Set);
-    this.exclusiveIds = new Set;
-    return this.clearRangeCache();
-  }
-
-  dump(ids) {
-    let result = {};
-    this.rootNode.dump(ids, Point.ZERO, result);
-    extend(this.rangeCache, result);
-    return result;
-  }
-
-  /*
-  Section: Private
-  */
-
-  clearRangeCache() {
-    return this.rangeCache = {};
-  }
-
-  condenseIfNeeded() {
-    while (__guard__(this.rootNode.children, x => x.length) === 1) {
-      this.rootNode = this.rootNode.children[0];
-    }
-  }
-};
-
-var assertValidId = function(id) {
-  // Original:
-  // if (typeof id !== 'string') {
-  //   throw new TypeError("Marker ID must be a string");
-  // }
-
-  // It seems that marker ids are no longer required to be strings.
-  // In practice, they appear to be numbers because that is what
-  // TextBuffer.getNextMarkerId() vends out.
-  const type = typeof id;
-  if (type !== 'string' && type !== 'number') {
-    throw new TypeError("Marker ID must be a string or number");
-  }
-};
-
-var templateRange = () => Object.create(Range.prototype);
-
-var setsOverlap = function(set1, set2) {
-  let next;
-  let values = set1.values();
-  while (!(next = values.next()).done) {
-    if (set2.has(next.value)) { return true; }
-  }
-  return false;
-};
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}
-
-module.exports = MarkerIndex;
