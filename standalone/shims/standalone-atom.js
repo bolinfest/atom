@@ -4,7 +4,7 @@ window.setImmediate = function(callback) {
 
 const pathModule = require('path');
 
-const resourcePath = '/Users/zuck/resourcePath';
+const resourcePath = ATOM_RESOURCE_PATH;
 
 // This exists in a GitHub checkout of Atom, but I cannot seem to
 // find it under /Applications/Atom.app/.
@@ -53,6 +53,10 @@ const fs = require('fs');
 function addFile(file, contents) {
   fsPlus.makeTreeSync(pathModule.dirname(file));
   fs.writeFileSync(file, contents);
+}
+
+for (const fileName in ATOM_FILES_TO_ADD) {
+  addFile(fileName, ATOM_FILES_TO_ADD[fileName]);
 }
 
 addFile(menusConfigFile, JSON.stringify({menu: []}));

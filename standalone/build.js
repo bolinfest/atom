@@ -66,6 +66,7 @@ function build() {
   const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
   const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
   fs.makeTreeSync(atomPackagesDir);
+  const filesTypesToCopyFromPackage = new Set(['.cson', '.js', '.json', '.less']);
   for (const pkg of atomPackages) {
     const destinationDir = `${atomPackagesDir}/${pkg}`;
     copySyncWatch(
@@ -77,8 +78,8 @@ function build() {
     fs.traverseTreeSync(
       destinationDir,
       fileName => {
-        // What about .cson files?
-        if (fileName.endsWith('.js') || fileName.endsWith('.json') || fileName.endsWith('.less')) {
+        const extension = path.extname(fileName);
+        if (filesTypesToCopyFromPackage.has(extension)) {
           entries[fileName] = fs.readFileSync(fileName, 'utf8');
         }
       },
@@ -241,6 +242,21 @@ function build() {
     {global: true}
   );
 
+  // Map of absolute paths to file contents.
+  // Each of these entries will be added to the BrowserFS.FileSystem.InMemory file store at startup.
+  const ATOM_FILES_TO_ADD = {};
+
+  const ATOM_RESOURCE_PATH = '/Users/zuck/resourcePath';
+  fs.traverseTreeSync(
+    gitRoot + '/static',
+    fileName => {
+      const relative = path.relative(gitRoot, fileName);
+      const entry = path.join(ATOM_RESOURCE_PATH, relative);
+      ATOM_FILES_TO_ADD[entry] = fs.readFileSync(fileName, 'utf8');
+    },
+    directoryName => true
+  );
+
   const bundle = ids => {
     if (ids) {
       console.log('Changed', ids);
@@ -264,6 +280,14 @@ function build() {
         function write(data) {
           fs.appendFileSync(outFile, data);
         }
+
+        write(`var ATOM_RESOURCE_PATH = `);
+        write(JSON.stringify(ATOM_RESOURCE_PATH));
+        write(';\n');
+
+        write(`var ATOM_FILES_TO_ADD = `);
+        write(JSON.stringify(ATOM_FILES_TO_ADD));
+        write(';\n');
 
         for (const name of ['base', 'darwin', 'linux', 'win32']) {
           const keymap = CSON.readFileSync(`${gitRoot}/keymaps/${name}.cson`);
