@@ -95,13 +95,6 @@ initializeApplicationWindow({blobStore: null}).then(() => {
   // has prepared, so we may be better off loading it explicitly.
   require('../../__atom_packages__/tabs/lib/main.js').activate();
 
-/*
- * In order to enable, find-and-replace, in
- *   ~/.atom/dev/packages/find-and-replace/node_modules/atom-space-pen-views/lib/select-list-view.js
- * comment the line
- *   atom.themes.requireStylesheet(require.resolve('../stylesheets/select-list.less'));
- * and uncomment the following two lines:
- */
-  // atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/find-and-replace');
-  // require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
+  atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/find-and-replace');
+  require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
 });

@@ -9,6 +9,7 @@ const fs = require('fs-plus');
 const path = require('path');
 const {spawnSync} = require('child_process');
 const CSON = require('season');
+const through = require('through');
 const watchify = require('watchify');
 const chokidar = require('chokidar');
 
@@ -59,8 +60,8 @@ function build() {
   // Do copy-sync work for a fixed set of Atom packages that must be installed in your
   // ~/.atom/dev/packages directory.
   const atomPackages = [
+    'find-and-replace',
     'tabs',
-//    'find-and-replace',
   ];
   const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
   const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
@@ -76,8 +77,8 @@ function build() {
     fs.traverseTreeSync(
       destinationDir,
       fileName => {
-        // What about .cson and .less files?
-        if (fileName.endsWith('.js') || fileName.endsWith('.json')) {
+        // What about .cson files?
+        if (fileName.endsWith('.js') || fileName.endsWith('.json') || fileName.endsWith('.less')) {
           entries[fileName] = fs.readFileSync(fileName, 'utf8');
         }
       },
@@ -131,7 +132,7 @@ function build() {
 
       // TODO(mbolin): Extract this programmatically.
       `${atomPackagesDir}/tabs/lib/main.js`,
-//      `${atomPackagesDir}/find-and-replace/lib/find.js`,
+      `${atomPackagesDir}/find-and-replace/lib/find.js`,
     ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
@@ -173,6 +174,72 @@ function build() {
       verbose: true,
     }
   ).on('log', console.log);
+
+  const transformSuffixes = {
+    // Currently, this matches both:
+    //     node_modules/atom-space-pen-views/lib/select-list-view.js
+    //     standalone/node_modules/__atom_packages__/find-and-replace/node_modules/atom-space-pen-views/lib/select-list-view.js
+    // Though ultimately we likely want to use this to overwrite require.resolve(), in general.
+    '/node_modules/atom-space-pen-views/lib/select-list-view.js': function(file, src) {
+      // TODO(mbolin): Replace this crude transform with a more precise and efficient one.
+
+      // Here, we are trying to patch up:
+      //
+      //    atom.themes.requireStylesheet(require.resolve('../stylesheets/select-list.less'));
+      //
+      // The piece that is matched by our regex is:
+      //
+      //    ../stylesheets/select-list.less
+      //
+      // Recall that we need to make it look like the file exists on the filesystem at:
+      // `${atomPackagesDir}/find-and-replace/node_modules/atom-space-pen-views/stylesheets/select-list.less`
+      // in the case of the find-and-replace package.
+      //
+      // Because we are going to replace the require.resolve() call altogether in this case,
+      // there will be no require() leftover, so Browserify will not try to resolve this file at
+      // all, ony the BrowserFS.FileSystem.InMemory will have to.
+      return src.replace(/require.resolve\(['"]([^\)]+)['"]\)/, function(fullMatch, arg) {
+        const absolutePath = path.join(path.dirname(file), arg);
+        // Remember to stringify because the replacement must be a string literal.
+        return JSON.stringify(absolutePath);
+      });
+    },
+  };
+  bundler.transform(
+    function (file) {
+      let patchTransform = null;
+      for (const suffix in transformSuffixes) {
+        if (file.endsWith(suffix)) {
+          patchTransform = transformSuffixes[suffix];
+          break;
+        }
+      }
+
+      // TODO(mbolin): Prefer Node's built-in transform streams over through.
+      if (patchTransform == null) {
+        function write(buf) {
+          this.queue(buf);
+        }
+        function end() {
+          this.queue(null);
+        }
+        return through(write, end);
+      } else {
+        const data = [];
+        function write(buf) {
+          data.push(buf);
+        }
+        function end() {
+          const src = data.join('');
+          this.queue(patchTransform(file, src));
+          this.queue(null);
+        }
+        return through(write, end);
+      }
+    },
+    // We must set {global:true} so that transforms apply to things under node_modules.
+    {global: true}
+  );
 
   const bundle = ids => {
     if (ids) {
