@@ -1,3 +1,28 @@
+// By default, browserify sets process.platform to 'browser'. Atom needs a
+// real value for process.platform because it does a lot of resource loading
+// based on this variable (including keyboard shortcut registration!).
+function detectPlatform() {
+  let platform = 'browser';
+  let userAgentPlatform;
+  try {
+    userAgentPlatform = window.navigator.platform;
+  } catch (e) {
+    console.error(`Could not find the platform: assuming '${platform}'.`);
+    return platform;
+  }
+
+  if (userAgentPlatform.includes('Mac')) {
+    platform = 'darwin';
+  } else if (userAgentPlatform.includes('Linux')) {
+    platform = 'linux';
+  } else if (userAgentPlatform.includes('Win')) {
+    platform = 'win32';
+  }
+
+  return platform;
+}
+process.platform = detectPlatform();
+
 window.setImmediate = function(callback) {
   Promise.resolve().then(callback);
 };
@@ -59,16 +84,10 @@ for (const fileName in ATOM_FILES_TO_ADD) {
   addFile(fileName, ATOM_FILES_TO_ADD[fileName]);
 }
 
-addFile(menusConfigFile, JSON.stringify({menu: []}));
-fsPlus.makeTreeSync(pathModule.join(resourcePath, 'keymaps'));
-fsPlus.makeTreeSync(pathModule.join(resourcePath, 'menus'));
-addFile(pathModule.join(resourcePath, 'menus/browser.cson'), JSON.stringify({menu: []}));
-
 for (const pkgName in ATOM_PACKAGE_CONTENTS) {
   const entryMap = ATOM_PACKAGE_CONTENTS[pkgName];
   for (const fileName in entryMap) {
     const contents = entryMap[fileName];
-    // addFile(`${process.env.ATOM_HOME}/packages/${pkgName}`)
     addFile(fileName, contents);
   }
 }

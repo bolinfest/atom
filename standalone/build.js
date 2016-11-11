@@ -8,7 +8,6 @@ const browserify = require('browserify');
 const fs = require('fs-plus');
 const path = require('path');
 const {spawnSync} = require('child_process');
-const CSON = require('season');
 const through = require('through');
 const watchify = require('watchify');
 const chokidar = require('chokidar');
@@ -247,11 +246,14 @@ function build() {
 
   const ATOM_RESOURCE_PATH = '/Users/zuck/resourcePath';
   const resourceFoldersToCopy = [
+    '/keymaps',
+    '/menus',
     '/node_modules/atom-dark-syntax',
     '/node_modules/atom-dark-ui',
     '/node_modules/atom-light-syntax',
     '/node_modules/atom-light-ui',
     '/node_modules/atom-ui',
+    '/resources',
     '/static',
   ];
   for (const folder of resourceFoldersToCopy) {
@@ -297,18 +299,6 @@ function build() {
         write(`var ATOM_FILES_TO_ADD = `);
         write(JSON.stringify(ATOM_FILES_TO_ADD));
         write(';\n');
-
-        for (const name of ['base', 'darwin', 'linux', 'win32']) {
-          const keymap = CSON.readFileSync(`${gitRoot}/keymaps/${name}.cson`);
-          if (keymap.body) {
-            delete keymap.body['cmd-c'];
-            delete keymap.body['cmd-v'];
-            delete keymap.body['cmd-x'];
-          }
-          write(`var STANDALONE_KEYMAP_${name.toUpperCase()} = `);
-          write(JSON.stringify(keymap));
-          write(';\n');
-        }
 
         write(`var ATOM_PACKAGE_CONTENTS = `);
         write(JSON.stringify(packageFilesWhoseContentsShouldBeInlined));
