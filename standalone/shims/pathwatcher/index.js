@@ -1,6 +1,5 @@
-const File = require('./file');
-
-exports.File = File;
+exports.Directory = require('./directory');
+exports.File = require('./file');
 
 exports.watch = function(path, callback) {
 

@@ -80,6 +80,19 @@ function addFile(file, contents) {
   fs.writeFileSync(file, contents);
 }
 
+// Unfortunately, I'm not sure why this hack works. Between fs, multiple versions
+// of fs-plus, and browserfs, there are a lot of entities trying to do funny things
+// with the fs module. We need to do some work to ensure only one instance of is
+// is used in the system. lstatSyncNoException is an API introduced by fs-plus, but
+// somehow it was missing when calling atom.project.addPath() when tree-view is loaded.
+fs.lstatSyncNoException = function(filePath) {
+  try {
+    return fs.lstatSync(filePath);
+  } catch (e) {
+    return null;
+  }
+};
+
 for (const fileName in ATOM_FILES_TO_ADD) {
   addFile(fileName, ATOM_FILES_TO_ADD[fileName]);
 }
@@ -110,6 +123,9 @@ const initializeApplicationWindow = require('../src/initialize-application-windo
 initializeApplicationWindow({blobStore: null}).then(() => {
   require('electron').ipcRenderer.send('window-command', 'window:loaded');
 
+  // Adding a root will cause the tree-view to pop open once it loads.
+  atom.project.addPath(fsPlus.getHomeDirectory());
+
   atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/notifications');
   require('../../__atom_packages__/notifications/lib/main.js').activate();
 
@@ -122,4 +138,10 @@ initializeApplicationWindow({blobStore: null}).then(() => {
 
   atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/find-and-replace');
   require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
+
+  atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/tree-view');
+  // tree-view does not seem to tolerate the case where it receives an empty state
+  // from the previous session, so we make sure to pass one explicitly.
+  const treeViewState = {attached: true};
+  require('../../__atom_packages__/tree-view/lib/main.js').activate(treeViewState);
 });
