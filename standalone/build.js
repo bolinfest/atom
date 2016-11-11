@@ -61,6 +61,7 @@ function build() {
   // ~/.atom/dev/packages directory.
   const atomPackages = [
     'find-and-replace',
+    'notifications',
     'tabs',
   ];
   const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
@@ -129,8 +130,9 @@ function build() {
       browserifyInputFile,
 
       // TODO(mbolin): Extract this programmatically.
-      `${atomPackagesDir}/tabs/lib/main.js`,
       `${atomPackagesDir}/find-and-replace/lib/find.js`,
+      `${atomPackagesDir}/notifications/lib/main.js`,
+      `${atomPackagesDir}/tabs/lib/main.js`,
     ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.

@@ -91,6 +91,9 @@ const initializeApplicationWindow = require('../src/initialize-application-windo
 initializeApplicationWindow({blobStore: null}).then(() => {
   require('electron').ipcRenderer.send('window-command', 'window:loaded');
 
+  atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/notifications');
+  require('../../__atom_packages__/notifications/lib/main.js').activate();
+
   atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/tabs');
   // For whatever reason, Atom seems to think tabs should not be auto-activated?
   // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
