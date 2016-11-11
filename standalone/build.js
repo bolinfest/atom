@@ -89,9 +89,6 @@ function build() {
     );
   }
 
-  // TODO: We need a build process for styles.css.
-  copyFileSyncWatch(standaloneDir + '/styles.css', standaloneDir + '/out/styles.css');
-
   // Insert some shims.
   copyFileSyncWatch(
     standaloneDir + '/shims/clipboard.js',
@@ -247,15 +244,25 @@ function build() {
   const ATOM_FILES_TO_ADD = {};
 
   const ATOM_RESOURCE_PATH = '/Users/zuck/resourcePath';
-  fs.traverseTreeSync(
-    gitRoot + '/static',
-    fileName => {
-      const relative = path.relative(gitRoot, fileName);
-      const entry = path.join(ATOM_RESOURCE_PATH, relative);
-      ATOM_FILES_TO_ADD[entry] = fs.readFileSync(fileName, 'utf8');
-    },
-    directoryName => true
-  );
+  const resourceFoldersToCopy = [
+    '/node_modules/atom-dark-syntax',
+    '/node_modules/atom-dark-ui',
+    '/node_modules/atom-light-syntax',
+    '/node_modules/atom-light-ui',
+    '/node_modules/atom-ui',
+    '/static',
+  ];
+  for (const folder of resourceFoldersToCopy) {
+    fs.traverseTreeSync(
+      gitRoot + folder,
+      fileName => {
+        const relative = path.relative(gitRoot, fileName);
+        const entry = path.join(ATOM_RESOURCE_PATH, relative);
+        ATOM_FILES_TO_ADD[entry] = fs.readFileSync(fileName, 'utf8');
+      },
+      directoryName => true
+    );
+  }
 
   const bundle = ids => {
     if (ids) {
@@ -310,6 +317,14 @@ function build() {
         write(';\n');
 
         write(content);
+
+        // Some stylesheet insists on loading octicons.woff relative to the .html page, so we
+        // include both testpage.html and octicons.woff in the out/ directory.
+        try {
+          fs.symlinkSync(standaloneDir + '/testpage.html', standaloneDir + '/out/testpage.html');
+        } catch(e) {
+          // do nothing
+        }
 
         startedWatching = willWatch;
       }

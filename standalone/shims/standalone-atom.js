@@ -60,7 +60,6 @@ for (const fileName in ATOM_FILES_TO_ADD) {
 }
 
 addFile(menusConfigFile, JSON.stringify({menu: []}));
-addFile(pathModule.join(resourcePath, 'static/atom.less'), '');
 fsPlus.makeTreeSync(pathModule.join(resourcePath, 'keymaps'));
 fsPlus.makeTreeSync(pathModule.join(resourcePath, 'menus'));
 addFile(pathModule.join(resourcePath, 'menus/browser.cson'), JSON.stringify({menu: []}));

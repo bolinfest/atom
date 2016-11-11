@@ -1,8 +1,5 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <link rel="stylesheet" href="out/styles.css">
-</head>
 <body>
   <script>
   function updateStatus(message) {
@@ -18,7 +15,7 @@
     updateStatus('Could not load atom.js. Check your console.');
   }
   </script>
-  <script src="out/atom.js" onerror="onAtomLoadError()"></script>
+  <script src="atom.js" onerror="onAtomLoadError()"></script>
   <script>
   atom.keymaps.add('base', STANDALONE_KEYMAP_BASE);
   atom.keymaps.add('darwin', STANDALONE_KEYMAP_DARWIN);
