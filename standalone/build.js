@@ -54,8 +54,6 @@ function build() {
   );
   copyFileSyncWatch(gitRoot + '/static/octicons.woff', standaloneDir + '/out/octicons.woff');
 
-  const packageFilesWhoseContentsShouldBeInlined = {};
-
   // Do copy-sync work for a fixed set of Atom packages that must be installed in your
   // ~/.atom/dev/packages directory.
   const atomPackages = [
@@ -65,17 +63,23 @@ function build() {
     'tree-view',
   ];
   const atomPackagesDir = `${standaloneDir}/node_modules/__atom_packages__`;
-  const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
   fs.makeTreeSync(atomPackagesDir);
+
+  // Every entry in this app has the path to the "main" file in package.json.
+  const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
   const filesTypesToCopyFromPackage = new Set(['.cson', '.js', '.json', '.less']);
+  const atomPackageData = {};
+  const entryPoints = [];
   for (const pkg of atomPackages) {
+    atomPackageData[pkg] = {};
+
     const destinationDir = `${atomPackagesDir}/${pkg}`;
     copySyncWatch(
       `${devPackagesDir}/${pkg}`,
       destinationDir,
       tree => fs.traverseTreeSync(tree, transpileFile, () => true));
 
-    const entries = packageFilesWhoseContentsShouldBeInlined[pkg] = {};
+    const entries = atomPackageData[pkg]['files'] = {};
     fs.traverseTreeSync(
       destinationDir,
       fileName => {
@@ -88,6 +92,24 @@ function build() {
         return directoryName !== 'node_modules';
       }
     );
+
+    // Resolve the "main" attribute of package.json.
+    const manifest = JSON.parse(fs.readFileSync(`${destinationDir}/package.json`), 'utf8');
+    let {main} = manifest;
+
+    if (main == null) {
+      main = `${destinationDir}/index.js`;
+    } else {
+      main = path.resolve(destinationDir, main);
+      if (fs.isDirectorySync(main)) {
+        main = `${path.normalize(main)}/index.js`;
+      }
+      if (!fs.isFileSync(main)) {
+        main = main + '.js';
+      }
+    }
+    entryPoints.push(main);
+    atomPackageData[pkg]['metadata'] = {main};
   }
 
   // Insert some shims.
@@ -128,13 +150,7 @@ function build() {
   const bundler = browserify(
     [
       browserifyInputFile,
-
-      // TODO(mbolin): Extract this programmatically.
-      `${atomPackagesDir}/find-and-replace/lib/find.js`,
-      `${atomPackagesDir}/notifications/lib/main.js`,
-      `${atomPackagesDir}/tabs/lib/main.js`,
-      `${atomPackagesDir}/tree-view/lib/main.js`,
-    ],
+    ].concat(entryPoints),
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
       filter(id) {
@@ -302,8 +318,8 @@ function build() {
         write(JSON.stringify(ATOM_FILES_TO_ADD));
         write(';\n');
 
-        write(`var ATOM_PACKAGE_CONTENTS = `);
-        write(JSON.stringify(packageFilesWhoseContentsShouldBeInlined));
+        write(`var ATOM_PACKAGE_DATA = `);
+        write(JSON.stringify(atomPackageData));
         write(';\n');
 
         write('var ATOM_PACKAGE_ROOT_FROM_BROWSERIFY = ');
