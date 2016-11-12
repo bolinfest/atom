@@ -57,8 +57,12 @@ function build() {
   // Do copy-sync work for a fixed set of Atom packages that must be installed in your
   // ~/.atom/dev/packages directory.
   const atomPackages = [
+    'command-palette',
     'find-and-replace',
+    'go-to-line',
+    'markdown-preview',
     'notifications',
+    'status-bar',
     'tabs',
     'tree-view',
   ];

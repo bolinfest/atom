@@ -150,7 +150,12 @@ initializeApplicationWindow({blobStore: null}).then(() => {
     // one line of code in this loop. May be a problem for browserify's static pass.
   }
 
+  require('../../__atom_packages__/command-palette/lib/command-palette-view').activate();
+  require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
+  require('../../__atom_packages__/go-to-line/lib/go-to-line-view').activate();
+  require('../../__atom_packages__/markdown-preview/lib/main.js').activate();
   require('../../__atom_packages__/notifications/lib/main.js').activate();
+  require('../../__atom_packages__/status-bar/lib/main.js').activate();
 
   // For whatever reason, Atom seems to think tabs should not be auto-activated?
   // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
@@ -158,7 +163,6 @@ initializeApplicationWindow({blobStore: null}).then(() => {
   // has prepared, so we may be better off loading it explicitly.
   require('../../__atom_packages__/tabs/lib/main.js').activate();
 
-  require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
 
   // tree-view does not seem to tolerate the case where it receives an empty state
   // from the previous session, so we make sure to pass one explicitly.
