@@ -116,8 +116,25 @@ module.exports = {
       handler(...args)
     },
 
+    sendSync(action, ...args) {
+      var handler = handlers[action];
+      if (!handler) {
+        console.warn('Ignored synchronous IPC call', action, ...args);
+        return;
+      }
+      handler(...args)
+    },
+
     removeAllListeners(action) {
       delete listeners[action];
+    },
+
+    removeListener(action, callback) {
+      const listenersForAction = listeners[action] || [];
+      const index = listenersForAction.indexOf(callback);
+      if (index !== -1) {
+        listenersForAction.splice(index, 1);
+      }
     },
   },
 
@@ -130,6 +147,9 @@ module.exports = {
         getSize() { return [800, 600]; },
         isMaximized() { return false; },
         isWebViewFocused() { return true; },
+        removeListener(action, callback) {
+          console.warn(`Failing to remove listener for ${action} in remote.getCurrentWindow().`);
+        },
       }
     },
 
@@ -147,7 +167,7 @@ module.exports = {
   },
 
   screen: {
-    on() {
-    }
+    on() {},
+    removeListener(action, callback) {},
   },
 };
