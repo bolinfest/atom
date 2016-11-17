@@ -290,6 +290,33 @@ function build() {
     );
   }
 
+  const resourcesFile = standaloneDir + '/out/atom-resources.js';
+  try {
+    fs.unlinkSync(resourcesFile);
+  } catch(e) {
+    // do nothing
+  }
+
+  function writeResources(data) {
+    fs.appendFileSync(resourcesFile, data);
+  }
+
+  writeResources(`var ATOM_RESOURCE_PATH = `);
+  writeResources(JSON.stringify(ATOM_RESOURCE_PATH));
+  writeResources(';\n');
+
+  writeResources(`var ATOM_FILES_TO_ADD = `);
+  writeResources(JSON.stringify(ATOM_FILES_TO_ADD));
+  writeResources(';\n');
+
+  writeResources(`var ATOM_PACKAGE_DATA = `);
+  writeResources(JSON.stringify(atomPackageData));
+  writeResources(';\n');
+
+  writeResources('var ATOM_PACKAGE_ROOT_FROM_BROWSERIFY = ');
+  writeResources(JSON.stringify(atomPackagesDir));
+  writeResources(';\n');
+
   const bundle = ids => {
     if (ids) {
       console.log('Changed', ids);
@@ -305,33 +332,6 @@ function build() {
         // Clear out file before we start appending to it.
         const outFile = standaloneDir + '/out/atom.js';
         fs.writeFileSync(outFile, content);
-
-        const resourcesFile = standaloneDir + '/out/atom-resources.js';
-        try {
-          fs.unlinkSync(resourcesFile);
-        } catch(e) {
-          // do nothing
-        }
-
-        function write(data) {
-          fs.appendFileSync(resourcesFile, data);
-        }
-
-        write(`var ATOM_RESOURCE_PATH = `);
-        write(JSON.stringify(ATOM_RESOURCE_PATH));
-        write(';\n');
-
-        write(`var ATOM_FILES_TO_ADD = `);
-        write(JSON.stringify(ATOM_FILES_TO_ADD));
-        write(';\n');
-
-        write(`var ATOM_PACKAGE_DATA = `);
-        write(JSON.stringify(atomPackageData));
-        write(';\n');
-
-        write('var ATOM_PACKAGE_ROOT_FROM_BROWSERIFY = ');
-        write(JSON.stringify(atomPackagesDir));
-        write(';\n');
 
         // Some stylesheet insists on loading octicons.woff relative to the .html page, so we
         // include both testpage.html and octicons.woff in the out/ directory.
