@@ -20,7 +20,7 @@
     "atom-ui": "0.4.1",
     "babel-core": "5.8.38",
     "browserify": "13.1.1",
-    "browserfs": "1.0.0",
+    "browserfs": "bolinfest/BrowserFS#894ee30a1188258851c6af94c6cc1a0085ce94b7",
     "cached-run-in-this-context": "0.4.1",
     "chai": "3.5.0",
     "chokidar": "^1.6.1",
