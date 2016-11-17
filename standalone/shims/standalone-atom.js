@@ -66,15 +66,13 @@ process.binding = (arg) => {
 const inMemoryFs = new BrowserFS.FileSystem.InMemory();
 BrowserFS.initialize(inMemoryFs);
 
-const fsPlus = require('fs-plus');
-fsPlus.getHomeDirectory = function() {
-  // You could imagine we would do:
-  //     return process.env.HOME || process.env.USERPROFILE;
-  // but we are in a web browser! Anyone who is calling this is suspicious.
-  return '/Users/zuck';
-};
+// Define these environment variables for the benefit of fs-plus's
+// getHomeDirectory() function and anyone else who might need it.
+process.env.HOME = '/Users/zuck';
+process.env.USERPROFILE = '/Users/zuck';
 
 const fs = require('fs');
+const fsPlus = require('fs-plus');
 function addFile(file, contents) {
   fsPlus.makeTreeSync(pathModule.dirname(file));
   fs.writeFileSync(file, contents);
