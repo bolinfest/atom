@@ -118,11 +118,6 @@ fsPlus.resolveOnLoadPath = function(...args) {
 require('module').globalPaths = [];
 require('module').paths = [];
 
-// If we want to try a non-null blobStore:
-//     const FileSystemBlobStore = require('../src/file-system-blob-store.js');
-//     blobStore = new FileSystemBlobStore('/tmp');
-
-
 // Ultimately, two things should happen:
 // 1. tree-view should be fixed so it can tolerate an empty state.
 // 2. This should be able to be specified from the caller if someone
@@ -135,7 +130,12 @@ const atomPackageInitialState = {
 
 window.loadAtom = function(callback) {
   const initializeApplicationWindow = require('../src/initialize-application-window');
-  initializeApplicationWindow({blobStore: null}).then(() => {
+
+  // Various things try to write to the BlobStore.
+  const FileSystemBlobStore = require('../src/file-system-blob-store.js');
+  blobStore = new FileSystemBlobStore('/tmp');
+
+  initializeApplicationWindow({blobStore}).then(() => {
     require('electron').ipcRenderer.send('window-command', 'window:loaded');
 
     for (const atomPackage of atomPackages) {
