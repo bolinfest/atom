@@ -304,14 +304,17 @@ function build() {
       } else {
         // Clear out file before we start appending to it.
         const outFile = standaloneDir + '/out/atom.js';
+        fs.writeFileSync(outFile, content);
+
+        const resourcesFile = standaloneDir + '/out/atom-resources.js';
         try {
-          fs.unlinkSync(outFile);
+          fs.unlinkSync(resourcesFile);
         } catch(e) {
           // do nothing
         }
 
         function write(data) {
-          fs.appendFileSync(outFile, data);
+          fs.appendFileSync(resourcesFile, data);
         }
 
         write(`var ATOM_RESOURCE_PATH = `);
@@ -329,8 +332,6 @@ function build() {
         write('var ATOM_PACKAGE_ROOT_FROM_BROWSERIFY = ');
         write(JSON.stringify(atomPackagesDir));
         write(';\n');
-
-        write(content);
 
         // Some stylesheet insists on loading octicons.woff relative to the .html page, so we
         // include both testpage.html and octicons.woff in the out/ directory.
