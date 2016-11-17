@@ -73,7 +73,6 @@ function build() {
   const devPackagesDir = `${process.env.HOME}/.atom/dev/packages`;
   const filesTypesToCopyFromPackage = new Set(['.cson', '.js', '.json', '.less']);
   const atomPackageData = {};
-  const entryPoints = [];
   for (const pkg of atomPackages) {
     atomPackageData[pkg] = {};
 
@@ -112,7 +111,6 @@ function build() {
         main = main + '.js';
       }
     }
-    entryPoints.push(main);
     atomPackageData[pkg]['metadata'] = {main};
   }
 
@@ -154,7 +152,7 @@ function build() {
   const bundler = browserify(
     [
       browserifyInputFile,
-    ].concat(entryPoints),
+    ],
     {
       // filter() is documented at: https://github.com/substack/module-deps#var-d--mdepsopts.
       filter(id) {

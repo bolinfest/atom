@@ -17,5 +17,11 @@
   </script>
   <script src="atom-resources.js"></script>
   <script src="atom.js" onerror="onAtomLoadError()"></script>
+  <script>
+  loadAtom(({atom, fs}) => {
+    // Adding a root will cause the tree-view to pop open once it loads.
+    atom.project.addPath(fs.getHomeDirectory());
+  });
+  </script>
 </body>
 </html>

@@ -133,37 +133,42 @@ const atomPackageInitialState = {
   },
 };
 
-const initializeApplicationWindow = require('../src/initialize-application-window');
-initializeApplicationWindow({blobStore: null}).then(() => {
-  require('electron').ipcRenderer.send('window-command', 'window:loaded');
+window.loadAtom = function(callback) {
+  const initializeApplicationWindow = require('../src/initialize-application-window');
+  initializeApplicationWindow({blobStore: null}).then(() => {
+    require('electron').ipcRenderer.send('window-command', 'window:loaded');
 
-  // Adding a root will cause the tree-view to pop open once it loads.
-  atom.project.addPath(fsPlus.getHomeDirectory());
+    for (const atomPackage of atomPackages) {
+      const {name, main} = atomPackage;
+      atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/' + name);
+      const initialState = atomPackageInitialState[name];
+      // TODO(mbolin): Use main to eliminate the repeated calls to require() with
+      // one line of code in this loop. May be a problem for browserify's static pass.
+    }
 
-  for (const atomPackage of atomPackages) {
-    const {name, main} = atomPackage;
-    atom.packages.activatePackage(ATOM_PACKAGE_ROOT_FROM_BROWSERIFY + '/' + name);
-    const initialState = atomPackageInitialState[name];
-    // TODO(mbolin): Use main to eliminate the repeated calls to require() with
-    // one line of code in this loop. May be a problem for browserify's static pass.
-  }
+    require('../../__atom_packages__/command-palette/lib/command-palette-view').activate();
+    require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
+    require('../../__atom_packages__/go-to-line/lib/go-to-line-view').activate();
+    require('../../__atom_packages__/markdown-preview/lib/main.js').activate();
+    require('../../__atom_packages__/notifications/lib/main.js').activate();
+    require('../../__atom_packages__/status-bar/lib/main.js').activate();
 
-  require('../../__atom_packages__/command-palette/lib/command-palette-view').activate();
-  require('../../__atom_packages__/find-and-replace/lib/find.js').activate();
-  require('../../__atom_packages__/go-to-line/lib/go-to-line-view').activate();
-  require('../../__atom_packages__/markdown-preview/lib/main.js').activate();
-  require('../../__atom_packages__/notifications/lib/main.js').activate();
-  require('../../__atom_packages__/status-bar/lib/main.js').activate();
-
-  // For whatever reason, Atom seems to think tabs should not be auto-activated?
-  // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
-  // Though even if it could, it's unclear that it would load the path that Browserify
-  // has prepared, so we may be better off loading it explicitly.
-  require('../../__atom_packages__/tabs/lib/main.js').activate();
+    // For whatever reason, Atom seems to think tabs should not be auto-activated?
+    // atom.packages.loadedPackages['tabs'].mainModulePath is undefined.
+    // Though even if it could, it's unclear that it would load the path that Browserify
+    // has prepared, so we may be better off loading it explicitly.
+    require('../../__atom_packages__/tabs/lib/main.js').activate();
 
 
-  // tree-view does not seem to tolerate the case where it receives an empty state
-  // from the previous session, so we make sure to pass one explicitly.
-  const treeViewState = {attached: true};
-  require('../../__atom_packages__/tree-view/lib/main.js').activate(treeViewState);
-});
+    // tree-view does not seem to tolerate the case where it receives an empty state
+    // from the previous session, so we make sure to pass one explicitly.
+    const treeViewState = {attached: true};
+    require('../../__atom_packages__/tree-view/lib/main.js').activate(treeViewState);
+
+    const paramsForCaller = {
+      atom,
+      fs: fsPlus,
+    };
+    callback(paramsForCaller);
+  });
+}
